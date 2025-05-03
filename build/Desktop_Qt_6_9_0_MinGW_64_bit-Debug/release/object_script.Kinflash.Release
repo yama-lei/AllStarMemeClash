@@ -1,0 +1,12 @@
+release/GameManager.o
+release/GameScene.o
+release/MainMenu.o
+release/Player.o
+release/Prop.o
+release/main.o
+release/qrc_resource.o
+release/moc_GameManager.o
+release/moc_GameScene.o
+release/moc_MainMenu.o
+release/moc_Player.o
+release/moc_Prop.o

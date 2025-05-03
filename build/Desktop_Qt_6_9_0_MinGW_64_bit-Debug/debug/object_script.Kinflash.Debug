@@ -1,0 +1,12 @@
+debug/GameManager.o
+debug/GameScene.o
+debug/MainMenu.o
+debug/Player.o
+debug/Prop.o
+debug/main.o
+debug/qrc_resource.o
+debug/moc_GameManager.o
+debug/moc_GameScene.o
+debug/moc_MainMenu.o
+debug/moc_Player.o
+debug/moc_Prop.o
