@@ -34,7 +34,7 @@ protected:
 
 public:
     Player(QPointF pos, QGraphicsItem* parent = nullptr);
-    virtual void updateState(qreal delta, QRectF currentSize);
+    virtual void updateState(qreal delta, QPointF center, qreal radius);
     void setDirection(Direction d) { direction = d; };
     void paint(QPainter* painter,
                const QStyleOptionGraphicsItem* option,
@@ -67,7 +67,7 @@ class User : public Player
     Q_OBJECT
 public:
     User(QPointF pos, QGraphicsItem* parent = nullptr);
-    void updateState(qreal delta, QRectF currentRect) override;
+    void updateState(qreal delta, QPointF center, qreal radius) override;
     void handleKeyPressEvent(QKeyEvent* evnet);
     void handleKeyReleaseEvent(QKeyEvent* event);
     void goDie();
@@ -80,7 +80,7 @@ class NPC : public Player
 {
 public:
     NPC(QPointF pos, QGraphicsItem* parent = nullptr);
-    void updateState(qreal delta, QRectF currentRect) override;
+    void updateState(qreal delta, QPointF center, qreal radius) override;
     void handleKeyPressEvent(QKeyEvent* evnet);
     void handleKeyReleaseEvent(QKeyEvent* event);
     void goDie();

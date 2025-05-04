@@ -1,9 +1,13 @@
 #include "GameScene.h"
-QPointF GameScene::randomPosition()
+QPointF GameScene::randomPositionInCircle(QPointF center, qreal maxRadius)
 {
-    double x = QRandomGenerator::global()->generateDouble() * (SCENE.width() - 200.0) + 100.0;
-    double y = QRandomGenerator::global()->generateDouble() * (SCENE.height() - 200.0) + 100.0;
-    return QPointF(x, y);
+    //只能生成安全区以内的
+
+    double alpha = QRandomGenerator::global()->generateDouble() * 6.28;
+    qreal radius = sqrt(QRandomGenerator::global()->generateDouble()) * maxRadius;
+    qreal x = radius * qSin(alpha);
+    qreal y = radius * qCos(alpha);
+    return QPointF(x, y) + center;
 }
 
 GameScene::GameScene(QWidget *parent)
@@ -44,12 +48,12 @@ void GameScene::gameOverSlot()
 }
 void GameScene::initPlayers()
 {
-    user = new User(randomPosition());
+    user = new User(randomPositionInCircle(sceneCenter, safetyZoneRadius));
     connect(user, &User::userDie, this, &GameScene::gameOverSignal);
 
     players.append(user);
     for (int i = 0; i < 10; i++) {
-        NPC* npc = new NPC(randomPosition());
+        NPC *npc = new NPC(randomPositionInCircle(sceneCenter, safetyZoneRadius));
         connect(npc, &Player::playerDied, this, &GameScene::handlePlayerDeath);
 
         players.append(npc);
@@ -61,15 +65,15 @@ void GameScene::initPlayers()
 
 void GameScene::initProps()
 {
-    for (int i = 0; i < 20; i++) {
-        props.append(new BloodBottle(randomPosition()));
+    for (int i = 0; i < 0; i++) {
+        props.append(new BloodBottle(randomPositionInCircle(sceneCenter, safetyZoneRadius)));
     }
 
-    for (int i = 0; i < 160; i++) {
-        props.append(new Knife(randomPosition()));
+    for (int i = 0; i < 0; i++) {
+        props.append(new Knife(randomPositionInCircle(sceneCenter, safetyZoneRadius)));
     }
-    for (int i = 0; i < 8; i++) {
-        props.append(new Bushes(randomPosition()));
+    for (int i = 0; i < 0; i++) {
+        props.append(new Bushes(randomPositionInCircle(sceneCenter, safetyZoneRadius)));
     }
     for (auto prop : std::as_const(props)) {
         scene->addItem(prop);
@@ -100,7 +104,10 @@ GameScene::~GameScene()
     // 清理所有道具
     for (auto &prop : props) {
         if (prop != nullptr) {
-            scene->removeItem(prop);
+            // 检查道具是否还在场景中
+            if (prop->scene() == scene) {
+                scene->removeItem(prop);
+            }
             delete prop;
             prop = nullptr;
         }
@@ -110,7 +117,10 @@ GameScene::~GameScene()
     // 清理所有玩家对象
     for (auto &player : players) {
         if (player != nullptr) {
-            scene->removeItem(player);
+            // 检查玩家是否还在场景中
+            if (player->scene() == scene) {
+                scene->removeItem(player);
+            }
             delete player;
             player = nullptr;
         }
@@ -217,9 +227,7 @@ void GameScene::updateGame()
     shrinkSafetyZone();
     //-----------------Update-------------------//
     for (auto player : std::as_const(players)) {
-        player->updateState(delta,
-                            backImage_normal->mapToScene(backImage_normal->boundingRect())
-                                .boundingRect());
+        player->updateState(delta, sceneCenter, safetyZoneRadius);
     }
 
     view->centerOn(user);
@@ -234,7 +242,10 @@ void GameScene::updateGame()
             line->setPen(pen);
             scene->addItem(line);
             QTimer::singleShot(16, [line, this]() {
-                scene->removeItem(line);
+                // 检查线条是否还存在于场景中
+                if (line && line->scene() == scene) {
+                    scene->removeItem(line);
+                }
                 delete line;
             });
             qreal q = QRandomGenerator::global()->generateDouble();
@@ -254,6 +265,7 @@ void GameScene::shrinkSafetyZone()
         backImage_normal->setScale(scaleRate);
         //  qDebug() << backImage_normal->mapToScene(backImage_normal->boundingRect()).boundingRect();
     }
+    safetyZoneRadius = scene->width() / 2 * scaleRate;
 }
 
 void GameScene::handlePlayerDeath(Player *player)

@@ -18,6 +18,7 @@ private:
     bool gameStart = false;
     QPainter* attackLine;
     QSizeF SCENE = QSizeF(6000, 6000);
+    QPointF sceneCenter = QPointF(3000, 3000);
     QSizeF VIEW = QSizeF(1280, 720);
     QSet<int> pressedKeys;
     QGraphicsView* view;
@@ -35,6 +36,7 @@ private:
     qreal scaleRate = 1;
     void mousePressEvent(QMouseEvent* event);
     QPair<Player*, qreal> closestEnemy(Player* player);
+    qreal safetyZoneRadius = 3000;
 private slots:
     void handlePlayerDeath(Player* player);
 
@@ -48,7 +50,7 @@ public:
     void extracted();
     void initProps();
     ~GameScene();
-    QPointF randomPosition();
+    QPointF randomPositionInCircle(QPointF center, qreal maxRadius);
     void shrinkSafetyZone();
     void startGame() { gameStart = true; }
     void paintEvent(QPaintEvent* event);

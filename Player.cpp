@@ -51,7 +51,7 @@ void User::onDeathAnimationEnd()
     this->hide();
     emit userDie();
 }
-void Player::updateState(qreal time, QRectF currentRect)
+void Player::updateState(qreal time, QPointF center, qreal radius)
 {
     //Update the position and other state of the pLayer(like blood)
     qDebug() << "This function shoulden't be called!";
@@ -112,14 +112,20 @@ void Player::extracted(QList<QGraphicsItem *> &items)
     for (auto item : items) {
         if (dynamic_cast<BloodBottle *>(item) != nullptr) {
             addBlood(1);
-            scene()->removeItem(item);
+            // 检查道具是否还在场景中
+            if (item->scene()) {
+                scene()->removeItem(item);
+            }
             // qDebug() << "Collide with BloodBottle";
         } else if (dynamic_cast<Bushes *>(item) != nullptr) {
             //  qDebug() << "Collide with Bushes!";
         } else if (dynamic_cast<Knife *>(item) != nullptr) {
             addKnives(1);
             // qDebug() << "Knives is picked!";
-            scene()->removeItem(item);
+            // 检查道具是否还在场景中
+            if (item->scene()) {
+                scene()->removeItem(item);
+            }
         }
     }
 }
@@ -160,7 +166,7 @@ void Player::goDie()
     assert(0);
 }
 
-void User::updateState(qreal time, QRectF currentRect)
+void User::updateState(qreal time, QPointF center, qreal radius)
 {
     handleColliding();
     //------------update the position----------//
@@ -210,10 +216,19 @@ void User::updateState(qreal time, QRectF currentRect)
                || this->pos().y() + step.y() <= 0 + adjust) {
         step.setY(0);
     }*/
-    if (currentRect.contains(this->pos() + step)) {
+    QPointF newPoint = this->pos() + step;
+    qreal dis = (newPoint.x() - center.x()) * (newPoint.x() - center.x())
+                + (newPoint.y() - center.y()) * (newPoint.y() - center.y());
+
+    if (radius * radius > dis) {
+        moveBy(step.x(), step.y());
+        qDebug() << "r: " << radius << " dis: " << dis << " Center : " << center
+                 << "Current Pos: " << pos();
+    }
+    /*    if (currentRect.contains(this->pos() + step)) {
         moveBy(step.x(), step.y());
     }
-
+*/
     //WARNING: 这个地方死了之后就不要改变gif了
     if (!dieGifs.contains(currentGif)) {
         if (direction != STAY) {
@@ -270,7 +285,7 @@ NPC::NPC(QPointF pos, QGraphicsItem *parent)
     movingGif->start();
 }
 
-void NPC::updateState(qreal time, QRectF currentRect)
+void NPC::updateState(qreal time, QPointF center, qreal radius)
 {
     handleColliding();
     QPoint step(0, 0);
@@ -293,8 +308,13 @@ void NPC::updateState(qreal time, QRectF currentRect)
         step.setY(0);
     }
 
-    if (currentRect.contains(this->pos() + step)) {
+    QPointF newPoint = this->pos() + step;
+    qreal dis = (newPoint.x() - center.x()) * (newPoint.x() - center.x())
+                + (newPoint.y() - center.y()) * (newPoint.y() - center.y());
+
+    if (radius * radius > dis) {
         moveBy(step.x(), step.y());
+        // qDebug() << "r: " << radius << " dis: " << dis << " Center : " << center << "Current Pos: " << pos();
     }
     if (playerBlood <= 0) {
         goDie();

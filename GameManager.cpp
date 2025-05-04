@@ -45,7 +45,7 @@ void GameManager::switchToMainMenu()
         //这个地方要注意！！！ stackedWidget存储的地址要给它删了，因为用不上了，你要把他delete
         gameScene->hide();
         // 使用定时器延迟删除，让Qt完成所有挂起的事件处理
-        QTimer::singleShot(0, this, [this]() {
+        QTimer::singleShot(1000, this, [this]() {
             if (gameScene) {
                 delete gameScene;
                 gameScene = nullptr;

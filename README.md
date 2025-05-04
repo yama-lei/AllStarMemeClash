@@ -73,9 +73,7 @@
      }
      ```
 
-     发现定时器延时删除多少有点问题：1. 设置的时间是1ms，~~我以为是1s~~。 会出现不安全的情况，需要设置一个更长的时间比如100ms  2. 在lambda表达式里面，出现一个逻辑问题：我capture了this指针，删除了this所指的gameScene，但是！！this这个时候指向的已经是新的gameScene了！
-
-     修改之后: 
+     发现定时器延时删除多少有点问题：1. 设置的时间是1ms，~~我以为是1s~~。 会出现不安全的情况，需要设置一个更长的时间比如100ms  2. 在lambda表达式里面，出现一个逻辑问题：我capture了this指针，删除了this所指的gameScene，但是！！this这个时候指向的已经是新的gameScene了！修改之后: 
 
      ```cpp
      
@@ -101,11 +99,39 @@
          stackedWidget->setCurrentWidget(mainMenu);
      }
      ```
-
      这个时候程序的bug已经完全解决了，但是ai告诉我可以直接用`deleteLater`,但是，在实际应用中发现，会出现程序崩溃的情况，原因是多个gameScene共享了许多资源，在删除的时候出现了问题（我猜的）
+     
+     ---
 
-     可以使用`unique_ptr`来解决这个问题：
+     问题还没有解决，在过去的一段时间，我总是面临着程序崩溃的情况，
 
+     一直出现类似这样的报错：
+     
+     ```cpp
+     QGraphicsScene::removeItem: item 0x29aa639e510's scene (0x0) is different from this scene (0x29abdf59590)
+     QGraphicsScene::removeItem: item 0x29aa60c5db0's scene (0x0) is different from this scene (0x29abdf59590)
+     QGraphicsScene::removeItem: item 0x29aa60c64f0's scene (0x0) is different from this scene (0x29abdf59590)
+     QGraphicsScene::removeItem: item 0x29aa60c6570's scene (0x0) is different from this scene (0x29abdf59590)
+     QGraphicsScene::removeItem: item 0x29aa5711090's scene (0x0) is different from this scene (0x29abdf59590)
+     QGraphicsScene::removeItem: item 0x29abdee7970's scene (0x0) is different from this scene (0x29abdf59590)
+     QGraphicsScene::removeItem: item 0x29aa63e52c0's scene (0x0) is different from this scene (0x29abdf59590)
+     14:59:14: 进程崩溃了。
+     ```
+     
+     结合
+     
+     
+     
+     
+     
+     
+     
+     
+     
+     
+     
+     
+     
      
 
 
@@ -131,7 +157,42 @@
 
 算法部分：
 
-1.   刀的更新算法：
+1.   随机位置生成算法：
+
+     使用极坐标变换，和qt随机数生成函数，均匀地生成随机点：
+
+     ```cpp
+     QPointF GameScene::randomPositionInCircle(QPointF center, qreal maxRadius)
+     {
+         double alpha = QRandomGenerator::global()->generateDouble() * 6.28;
+         qreal radius = QRandomGenerator::global()->generateDouble() * maxRadius;
+         qreal x = radius * qSin(alpha);
+         qreal y = radius * qCos(alpha);
+         return QPointF(x, y) + center;
+     }
+     ```
+
+     但是发现大部分的随机点都是在圆心附近，说明算法有问题：
+
+     这个算法的$E(r) =0.5r$,但是$E(r^2)= 0.25r^2$，我们期望随机点按照面积均匀分布，因而将随机数进行开根号，使得有更大的可能性接近外圆周。
+
+     ```cpp
+     QPointF GameScene::randomPositionInCircle(QPointF center, qreal maxRadius)
+     {
+         //只能生成安全区以内的
+     
+         double alpha = QRandomGenerator::global()->generateDouble() * 6.28;
+         qreal radius = sqrt(QRandomGenerator::global()->generateDouble()) * maxRadius;
+         qreal x = radius * qSin(alpha);
+         qreal y = radius * qCos(alpha);
+         return QPointF(x, y) + center;
+     }
+     
+     ```
+
+     
+
+2.   刀的更新算法：
 
      ```cpp
      // 角色的paint函数
@@ -144,8 +205,8 @@
      //具体计算每一个刀的位置：
      ```
 
-2.   最近用户查找算法
+3.   最近用户查找算法
 
      其实就是暴力遍历
 
-3.   “智能”NPC算法
+4.   “智能”NPC算法
