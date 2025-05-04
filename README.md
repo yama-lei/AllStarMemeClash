@@ -1,3 +1,7 @@
+# AllStarsMemeClash Docs 全明星meme大乱斗
+
+
+
 开发过程中的常见错误：
 
 1.   xxxxIncomplete Type: 未引入相关头文件
@@ -45,6 +49,62 @@
      ```cpp
      Qwen: 因为你没有将角色的坐标映射到scene的坐标
      ```
+
+8.   程序崩溃： 在角色死亡或者游戏胜利的时候都会出现回到MainMenu但是线程崩溃的情况。 经过多轮调试，发现问题应该出现在下面这个函数中：
+
+     ```cpp
+     void GameManager::switchToMainMenu()
+     {
+         qDebug() << "Switch To MainMenu";
+         if (gameScene) {
+             // 在删除场景前断开所有信号连接!!!
+             gameScene->disconnect();
+             stackedWidget->removeWidget(gameScene);
+             //这个地方要注意！！！ stackedWidget存储的地址要给它删了，因为用不上了，你要把他delete
+             gameScene->hide();
+             QTimer::singleShot(1, this, [this]() {
+                 if (gameScene) {
+                     delete gameScene;
+                     gameScene = nullptr;
+                 }
+             });
+         }
+         stackedWidget->setCurrentWidget(mainMenu);
+     }
+     ```
+
+     发现定时器延时删除多少有点问题：1. 设置的时间是1ms，~~我以为是1s~~。 会出现不安全的情况，需要设置一个更长的时间比如100ms  2. 在lambda表达式里面，出现一个逻辑问题：我capture了this指针，删除了this所指的gameScene，但是！！this这个时候指向的已经是新的gameScene了！
+
+     修改之后: 
+
+     ```cpp
+     
+     void GameManager::switchToMainMenu()
+     {
+         qDebug() << "Switch To MainMenu";
+         if (gameScene) {
+             // 在删除场景前断开所有信号连接!!!
+             gameScene->disconnect();
+             stackedWidget->removeWidget(gameScene);
+             //这个地方要注意！！！ stackedWidget存储的地址要给它删了，因为用不上了，你要把他delete
+             gameScene->hide();
+             // 使用定时器延迟删除，让Qt完成所有挂起的事件处理
+             auto temp = gameScene;
+             QTimer::singleShot(100, this, [temp]() {
+                 if (temp) {
+                     delete temp;
+                     //temp是
+                 }
+             });
+             gameScene = nullptr;
+         }
+         stackedWidget->setCurrentWidget(mainMenu);
+     }
+     ```
+
+     这个时候程序的bug已经完全解决了，但是ai告诉我可以直接用`deleteLater`,但是，在实际应用中发现，会出现程序崩溃的情况，原因是多个gameScene共享了许多资源，在删除的时候出现了问题（我猜的）
+
+     可以使用`unique_ptr`来解决这个问题：
 
      
 
