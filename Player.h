@@ -6,6 +6,7 @@
 #include <QPainter>
 #include <QRandomGenerator>
 #include <QThread>
+#include <QPointer>
 enum Direction { UP, DOWN, LEFT, RIGHT, STAY, LU, LD, RU, RD }; //上下左右，停，坐上左下，右上右下
 enum SpecialState { SPEEDUP, SPEEDDOWN, ATTACKUP, ATTACKDOWN, HEAHTHUP, HEATHDOWN };
 class Player : public QGraphicsObject

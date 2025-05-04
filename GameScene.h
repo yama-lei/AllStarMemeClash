@@ -8,27 +8,27 @@
 #include <QMouseEvent>
 #include <QTimer>
 #include <QWidget>
+#include <QElapsedTimer>
+#include <QPointer>
 #include "Player.h"
 #include "Prop.h"
-#include "QElapsedTimer"
 class GameScene : public QWidget
 {
     Q_OBJECT
 private:
-    bool gameStart = false;
-    QPainter* attackLine;
+    bool gameOn = false;
+    QPainter* attackLine = nullptr;
     QSizeF SCENE = QSizeF(6000, 6000);
     QPointF sceneCenter = QPointF(3000, 3000);
     QSizeF VIEW = QSizeF(1280, 720);
     QSet<int> pressedKeys;
-    QGraphicsView* view;
-    QGraphicsScene* scene;
-    User* user;
-    QGraphicsPixmapItem* backImage_normal;
-    QGraphicsPixmapItem*
-        backImage_poison; //用QGraphicsPixmapItem因为Pixmap没有设置层级的功能,这个是背景毒圈
-    QTimer* timer;
-    QElapsedTimer* elapsedTimer;
+    QGraphicsView* view = nullptr;
+    QGraphicsScene* scene = nullptr;
+    User* user = nullptr;
+    QGraphicsPixmapItem* backImage_normal = nullptr;
+    QGraphicsPixmapItem* backImage_poison = nullptr; //用QGraphicsPixmapItem因为Pixmap没有设置层级的功能,这个是背景毒圈
+    QTimer* timer = nullptr;
+    QElapsedTimer* elapsedTimer = nullptr;
     void keyPressEvent(QKeyEvent* event);
     void keyReleaseEvent(QKeyEvent* event);
     QList<Player*> players;
@@ -37,12 +37,12 @@ private:
     void mousePressEvent(QMouseEvent* event);
     QPair<Player*, qreal> closestEnemy(Player* player);
     qreal safetyZoneRadius = 3000;
+    QList<QGraphicsObject*> allItems;
 private slots:
     void handlePlayerDeath(Player* player);
 
 public slots:
     void updateGame();
-    void gameOverSlot();
 
 public:
     explicit GameScene(QWidget *parent = nullptr);
@@ -52,10 +52,11 @@ public:
     ~GameScene();
     QPointF randomPositionInCircle(QPointF center, qreal maxRadius);
     void shrinkSafetyZone();
-    void startGame() { gameStart = true; }
+    void startGame();
+    void endGame(bool win);
     void paintEvent(QPaintEvent* event);
 signals:
-    void gameOverSignal();
+    void gameOverSignal(bool win);
 };
 
 #endif // GAMESCENE_H

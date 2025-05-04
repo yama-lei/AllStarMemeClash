@@ -1,4 +1,4 @@
-#include"GameManager.h"
+#include "GameManager.h"
 GameManager::GameManager(QWidget* parent)
     : QMainWindow(parent)
 //Note：构造函数一定要记得调用父类构造函数
@@ -21,36 +21,12 @@ GameManager::GameManager(QWidget* parent)
 void GameManager::switchToGame()
 {
     qDebug() << "Switch To Game";
-    
-    // 如果之前的场景被延迟删除但还没完成，强制设为 nullptr
-    if (gameScene == nullptr) {
-        gameScene = new GameScene(this);
-        // 重新连接信号
-        connect(gameScene, &GameScene::gameOverSignal, this, &GameManager::switchToMainMenu);
-        stackedWidget->addWidget(gameScene);
-    }
-    
-    gameScene->startGame();
     stackedWidget->setCurrentWidget(gameScene);
+    gameScene->startGame();
 }
 
 void GameManager::switchToMainMenu()
 {
     qDebug() << "Switch To MainMenu";
-
-    if (gameScene) {
-        // 在删除场景前断开所有信号连接!!!
-        gameScene->disconnect();
-        stackedWidget->removeWidget(gameScene);
-        //这个地方要注意！！！ stackedWidget存储的地址要给它删了，因为用不上了，你要把他delete
-        gameScene->hide();
-        // 使用定时器延迟删除，让Qt完成所有挂起的事件处理
-        QTimer::singleShot(1000, this, [this]() {
-            if (gameScene) {
-                delete gameScene;
-                gameScene = nullptr;
-            }
-        });
-    }
     stackedWidget->setCurrentWidget(mainMenu);
 }

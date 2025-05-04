@@ -140,10 +140,17 @@ void Player::extracted(QList<QGraphicsItem *> &items)
             }
             addSpeed(this->playerSpeed * 0.3);
             specialState.append(SPEEDUP);
-            QTimer::singleShot(5000, this, [this]() {
-                addSpeed(-this->playerSpeed * 0.3); //return to the normal state;
-                if (specialState.contains(SPEEDUP)) {
-                    specialState.removeAll(SPEEDUP);
+            
+            // 使用QPointer监控this对象，防止定时器触发时对象已被销毁
+            QPointer<Player> weakThis = this;
+            QTimer::singleShot(5000, [weakThis]() {
+                // 检查对象是否仍然存在
+                if (!weakThis) {
+                    return;
+                }
+                weakThis->addSpeed(-weakThis->playerSpeed * 0.3); //return to the normal state;
+                if (weakThis->specialState.contains(SPEEDUP)) {
+                    weakThis->specialState.removeAll(SPEEDUP);
                 };
             });
         } else if (dynamic_cast<KnifeStrong *>(item) != nullptr) {
@@ -153,11 +160,18 @@ void Player::extracted(QList<QGraphicsItem *> &items)
             addAttack(1);
             this->kinfeImage = QPixmap(":/images/Props/knife-2.png");
             specialState.append(ATTACKUP);
-            QTimer::singleShot(3000, this, [this]() {
-                this->kinfeImage = QPixmap(":images/Props/fc403.png");
-                addAttack(-1); //return to the normal state;
-                if (specialState.contains(ATTACKUP)) {
-                    specialState.removeAll(ATTACKUP);
+            
+            // 使用QPointer监控this对象，防止定时器触发时对象已被销毁
+            QPointer<Player> weakThis = this;
+            QTimer::singleShot(3000, [weakThis]() {
+                // 检查对象是否仍然存在
+                if (!weakThis) {
+                    return;
+                }
+                weakThis->kinfeImage = QPixmap(":/images/Props/fc403.png");
+                weakThis->addAttack(-1); //return to the normal state;
+                if (weakThis->specialState.contains(ATTACKUP)) {
+                    weakThis->specialState.removeAll(ATTACKUP);
                 };
             });
         }
@@ -175,30 +189,40 @@ User::User(QPointF pos, QGraphicsItem *parent)
 {
     numOfKinves = 100;
     direction = STAY;
-    movingGif = new QMovie(":/images/figures/moving1.gif");
+    
+    // 检查是否有可用的GIF动画
+    if (!movingGifs.isEmpty()) {
+        movingGif = new QMovie(":/images/figures/moving1.gif");
+    } else {
+        movingGif = new QMovie();
+        qDebug() << "ERROR: movingGifs为空，使用空QMovie";
+    }
+    
     idleGif = new QMovie(":/images/figures/standing2.gif");
-    dieGif = dieGifs[0];
+    dieGif = dieGifs.isEmpty() ? new QMovie() : dieGifs[0];
     currentGif = movingGif;
+    
+    // 检查GIF是否有效
+    if (!movingGif->isValid()) {
+        qDebug() << "ERROR: movingGif无效";
+    }
+    
+    if (!idleGif->isValid()) {
+        qDebug() << "ERROR: idleGif无效";
+    }
+    
+    // 连接信号
     connect(movingGif, &QMovie::frameChanged, this, &Player::updateGif);
     connect(idleGif, &QMovie::frameChanged, this, &Player::updateGif);
-    //这是2个gif的信号连接到一个更新函数上了，处于便于管理的目的，优雅
-    try {
-        if (!idleGif || !movingGif || !currentGif) {
-            throw std::runtime_error("Error: Open Gif failed when creating player");
-        }
-    } catch (std::exception &e) {
-        qDebug() << e.what();
-    }
-
-    //因为同时两个gif播放对于性能的小号不大，因此没有关闭另外一个gif（当其他的gif在播放的时候）
+    
+    // 启动动画
     idleGif->start();
     movingGif->start();
 }
 
 void Player::goDie()
 {
-    qDebug() << "You should never call this function";
-    assert(0);
+    qDebug() << "ERROR: 应该在子类中重写此方法，而不是直接调用";
 }
 
 void User::updateState(qreal time, QPointF center, qreal radius)
@@ -293,31 +317,55 @@ void User::goDie()
 {
     if (!isAlive)
         return;
+        
     qDebug() << "I am died";
     isAlive = false;
+    
+    if (dieGifs.isEmpty()) {
+        qDebug() << "ERROR: dieGifs为空，无法显示死亡动画";
+        emit userDie();
+        return;
+    }
+    
     dieGif = dieGifs[0];
+    if (dieGif == nullptr) {
+        qDebug() << "ERROR: 死亡动画为空";
+        emit userDie();
+        return;
+    }
+    
     currentGif = dieGif;
-    currentGif->start(); //注意之前dieGif一直没有播放
-    emit userDie();      //这里有崩溃的bug
-    //QTimer::singleShot(1000, this, &User::onDeathAnimationEnd);
+    if (dieGif->isValid()) {
+        dieGif->start();
+    } else {
+        qDebug() << "ERROR: 死亡动画无效";
+    }
+    
+    emit userDie();
 }
 
 //--------------------NPC------------------------------------------------
 NPC::NPC(QPointF pos, QGraphicsItem *parent)
     : Player(pos, parent)
 {
-    movingGif = movingGifs[QRandomGenerator::global()->bounded(0, movingGifs.size())];
-    currentGif = movingGif;
-    dieGif = dieGifs[0];
-    connect(movingGif, &QMovie::frameChanged, this, &Player::updateGif);
-    try {
-        if (!movingGif || !currentGif) {
-            throw std::runtime_error("Error: Open Gif failed when creating player");
-        }
-    } catch (std::exception &e) {
-        qDebug() << e.what();
+    // 安全地选择一个移动GIF
+    if (!movingGifs.isEmpty()) {
+        int index = QRandomGenerator::global()->bounded(0, movingGifs.size());
+        movingGif = movingGifs[index];
+    } else {
+        movingGif = new QMovie();
+        qDebug() << "ERROR: movingGifs为空，使用空QMovie";
     }
-    movingGif->start();
+    
+    currentGif = movingGif;
+    dieGif = dieGifs.isEmpty() ? new QMovie() : dieGifs[0];
+    
+    if (movingGif && movingGif->isValid()) {
+        connect(movingGif, &QMovie::frameChanged, this, &Player::updateGif);
+        movingGif->start();
+    } else {
+        qDebug() << "ERROR: NPC的movingGif无效";
+    }
 }
 
 void NPC::updateState(qreal time, QPointF center, qreal radius)
@@ -374,16 +422,33 @@ void NPC::goDie()
 {
     if (!isAlive)
         return;
+        
     qDebug() << "NPC go die";
+    
+    if (dieGifs.isEmpty()) {
+        qDebug() << "ERROR: dieGifs为空，无法显示死亡动画";
+        isAlive = false;
+        emit playerDied(this);
+        return;
+    }
+    
     currentGif = dieGifs[0];
     if (currentGif == nullptr) {
-        qDebug() << "ERROR";
-        assert(0);
+        qDebug() << "ERROR: 死亡动画为空";
+        isAlive = false;
+        emit playerDied(this);
+        return;
     }
-    currentGif->start(); //注意之前dieGif一直没有播放
+    
+    if (currentGif->isValid()) {
+        currentGif->start();
+    } else {
+        qDebug() << "ERROR: 死亡动画无效";
+    }
+    
     // 确保只处理一次死亡
     isAlive = false;
-    // QTimer::singleShot(1000, this, &NPC::onDeathAnimationEnd);
+    emit playerDied(this);
 }
 
 void Player::attack(Player *other)
