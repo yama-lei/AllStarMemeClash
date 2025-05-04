@@ -48,3 +48,14 @@ Knife::Knife(QPointF pos, QGraphicsObject* parent)
 {
     image = QPixmap(":/images/Props/fc403.png");
 }
+KnifeStrong::KnifeStrong(QPointF pos, QGraphicsObject* parent)
+    : Prop(pos, parent)
+{
+    image = QPixmap(":/images/Props/knife-2.png");
+}
+
+Boot::Boot(QPointF pos, QGraphicsObject* parent)
+    : Prop(pos, parent)
+{
+    image = QPixmap(":/images/Props/boot.png");
+}

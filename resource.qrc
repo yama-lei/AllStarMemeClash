@@ -10,22 +10,24 @@
         <file>images/figures/standing2.gif</file>
         <file>images/figures/standing3.gif</file>
         <file>images/figures/standing4.gif</file>
-        <file>images/Props/blood.png</file>
-        <file>images/Props/knife.jpg</file>
-        <file>images/Props/Poison Cloud.gif</file>
         <file>images/Props/bushes.png</file>
         <file>images/Props/fc272.png</file>
         <file>images/Props/fc403.png</file>
         <file>images/Props/fc959.png</file>
-        <file>images/Props/fc965.png</file>
-        <file>images/Props/fc969.png</file>
-        <file>images/Props/fc1098.png</file>
-        <file>images/Props/knife.png</file>
         <file>images/bg.png</file>
         <file>images/bg2.png</file>
         <file>images/blue.png</file>
         <file>images/green.png</file>
-        <file>images/yellow.png</file>
         <file>images/figures/die.gif</file>
+        <file>images/yellow.png</file>
+        <file>images/effect/fast.png</file>
+        <file>images/effect/light.png</file>
+        <file>images/Props/knife-2.png</file>
+        <file>images/Props/boot.png</file>
+        <file>images/effect/fc965.png</file>
+        <file>images/effect/feet.png</file>
+        <file>images/effect/health.png</file>
+        <file>images/effect/strength.png</file>
+        <file>images/effect/strengthUp.png</file>
     </qresource>
 </RCC>

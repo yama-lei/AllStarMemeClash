@@ -52,7 +52,7 @@ void GameScene::initPlayers()
     connect(user, &User::userDie, this, &GameScene::gameOverSignal);
 
     players.append(user);
-    for (int i = 0; i < 10; i++) {
+    for (int i = 0; i < 1; i++) {
         NPC *npc = new NPC(randomPositionInCircle(sceneCenter, safetyZoneRadius));
         connect(npc, &Player::playerDied, this, &GameScene::handlePlayerDeath);
 
@@ -74,6 +74,12 @@ void GameScene::initProps()
     }
     for (int i = 0; i < 0; i++) {
         props.append(new Bushes(randomPositionInCircle(sceneCenter, safetyZoneRadius)));
+    }
+    for (int i = 0; i < 20; i++) {
+        props.append(new Boot(randomPositionInCircle(sceneCenter, safetyZoneRadius)));
+    }
+    for (int i = 0; i < 20; i++) {
+        props.append(new KnifeStrong(randomPositionInCircle(sceneCenter, safetyZoneRadius)));
     }
     for (auto prop : std::as_const(props)) {
         scene->addItem(prop);

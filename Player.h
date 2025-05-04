@@ -6,9 +6,8 @@
 #include <QPainter>
 #include <QRandomGenerator>
 #include <QThread>
-#include "Prop.h"
 enum Direction { UP, DOWN, LEFT, RIGHT, STAY, LU, LD, RU, RD }; //上下左右，停，坐上左下，右上右下
-
+enum SpecialState { SPEEDUP, SPEEDDOWN, ATTACKUP, ATTACKDOWN, HEAHTHUP, HEATHDOWN };
 class Player : public QGraphicsObject
 {
     Q_OBJECT
@@ -31,6 +30,8 @@ protected:
     //--- 游戏属性--、、
     int playerBlood = 1;
     qreal playerSpeed = 1200;
+    int attackPower = 1;
+    QList<SpecialState> specialState;
 
 public:
     Player(QPointF pos, QGraphicsItem* parent = nullptr);
@@ -48,7 +49,11 @@ public:
     void addKnives(int k)
     {
         numOfKinves += numOfKinves >= 15 && k > 0 ? 0 : k;
+        if (numOfKinves < 0) {
+            numOfKinves = 0;
+        }
     } //注意这个地方是不再增加而不是不再减少，改减少的时候还是要减少
+    void addAttack(int a) { attackPower += a; };
     void attack(Player* other);
     QPainterPath shape() const override;
     QPointF calculateKinvesPosition(qreal alpha);

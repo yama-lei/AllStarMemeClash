@@ -1,4 +1,5 @@
 #include "Player.h"
+#include "Prop.h"
 #include "qgraphicsscene.h"
 #include "qtimer.h"
 
@@ -92,6 +93,13 @@ void Player::paint(QPainter *painter, const QStyleOptionGraphicsItem *, QWidget 
         painter->setFont(QFont("Arial", 24, QFont::Bold));
         QString text = QString("HP: %1, Knives: %2").arg(playerBlood).arg(numOfKinves);
         painter->drawText(-100, center.y(), text);
+
+        if (specialState.contains(ATTACKUP)) {
+            painter->drawPixmap(center - QPointF(70, 0), QPixmap(":/images/effect/strengthUp.png"));
+        }
+        if (specialState.contains(SPEEDUP)) {
+            painter->drawPixmap(center, QPixmap(":/images/effect/fast.png"));
+        }
     } else {
         painter->setBrush(Qt::red);
         painter->drawRect(boundingRect());
@@ -126,6 +134,32 @@ void Player::extracted(QList<QGraphicsItem *> &items)
             if (item->scene()) {
                 scene()->removeItem(item);
             }
+        } else if (dynamic_cast<Boot *>(item) != nullptr) {
+            if (item->scene()) {
+                scene()->removeItem(item);
+            }
+            addSpeed(this->playerSpeed * 0.3);
+            specialState.append(SPEEDUP);
+            QTimer::singleShot(5000, this, [this]() {
+                addSpeed(-this->playerSpeed * 0.3); //return to the normal state;
+                if (specialState.contains(SPEEDUP)) {
+                    specialState.removeAll(SPEEDUP);
+                };
+            });
+        } else if (dynamic_cast<KnifeStrong *>(item) != nullptr) {
+            if (item->scene()) {
+                scene()->removeItem(item);
+            }
+            addAttack(1);
+            this->kinfeImage = QPixmap(":/images/Props/knife-2.png");
+            specialState.append(ATTACKUP);
+            QTimer::singleShot(3000, this, [this]() {
+                this->kinfeImage = QPixmap(":images/Props/fc403.png");
+                addAttack(-1); //return to the normal state;
+                if (specialState.contains(ATTACKUP)) {
+                    specialState.removeAll(ATTACKUP);
+                };
+            });
         }
     }
 }
@@ -139,6 +173,7 @@ void Player::handleColliding()
 User::User(QPointF pos, QGraphicsItem *parent)
     : Player(pos, parent)
 {
+    numOfKinves = 100;
     direction = STAY;
     movingGif = new QMovie(":/images/figures/moving1.gif");
     idleGif = new QMovie(":/images/figures/standing2.gif");
@@ -222,8 +257,7 @@ void User::updateState(qreal time, QPointF center, qreal radius)
 
     if (radius * radius > dis) {
         moveBy(step.x(), step.y());
-        qDebug() << "r: " << radius << " dis: " << dis << " Center : " << center
-                 << "Current Pos: " << pos();
+        //qDebug() << "r: " << radius << " dis: " << dis << " Center : " << center<< "Current Pos: " << pos();
     }
     /*    if (currentRect.contains(this->pos() + step)) {
         moveBy(step.x(), step.y());
@@ -264,7 +298,8 @@ void User::goDie()
     dieGif = dieGifs[0];
     currentGif = dieGif;
     currentGif->start(); //注意之前dieGif一直没有播放
-    QTimer::singleShot(1000, this, &User::onDeathAnimationEnd);
+    emit userDie();      //这里有崩溃的bug
+    //QTimer::singleShot(1000, this, &User::onDeathAnimationEnd);
 }
 
 //--------------------NPC------------------------------------------------
@@ -348,7 +383,7 @@ void NPC::goDie()
     currentGif->start(); //注意之前dieGif一直没有播放
     // 确保只处理一次死亡
     isAlive = false;
-    QTimer::singleShot(1000, this, &NPC::onDeathAnimationEnd);
+    // QTimer::singleShot(1000, this, &NPC::onDeathAnimationEnd);
 }
 
 void Player::attack(Player *other)
@@ -372,10 +407,10 @@ void Player::attack(Player *other)
     }
     
     if (other->numOfKinves <= 0) {
-        other->addBlood(-1);
+        other->addBlood(-attackPower);
         qDebug() << "The other blood -1";
     } else {
-        other->addKnives(-1);
+        other->addKnives(-attackPower);
         qDebug() << "The other knife -1";
     }
 
