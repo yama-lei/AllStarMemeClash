@@ -38,6 +38,8 @@ private:
     QPair<Player*, qreal> closestEnemy(Player* player);
     qreal safetyZoneRadius = 3000;
     QList<QGraphicsObject*> allItems;
+    QList<QPair<QPair<QPointF, QPointF>, Prop*>> flyingKnives;
+    typedef QPair<QPair<QPointF, QPointF>, Prop*> FlyingProp;
 private slots:
     void handlePlayerDeath(Player* player);
 
@@ -55,6 +57,8 @@ public:
     void startGame();
     void endGame(bool win);
     void paintEvent(QPaintEvent* event);
+    void updateFlyingProp(qreal time);
+    qreal flyingPropSpeed = 10;
 signals:
     void gameOverSignal(bool win);
 };

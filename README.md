@@ -59,6 +59,8 @@ date: 2025-05-04
 
 5.   **角色无敌？？？** 原来是`void addKnives(int k) { numOfKinves += numOfKinves >= 15 ? 0 : k; }`....
 
+     我设置成了只有刀的数量少于15才能攻击。。
+
 6.   游戏界面和菜单界面相互切换的时候也是有bug，因为在重新new一个gameScene的时候没有connect这个gameScene和gameManager!! (感谢AI主人，我愿意当你的🐶)
 
 7.   画不出跟踪敌人的线？为什么？？？我明明设置了pen和painter了啊？
@@ -71,7 +73,11 @@ date: 2025-05-04
 
      调试发现，函数确实被调用了，但是调用的频率相当低。
 
-8.   程序崩溃： 在角色死亡或者游戏胜利的时候都会出现回到MainMenu但是线程崩溃的情况。 经过多轮调试，发现问题应该出现在下面这个函数中：<a name="error">  </a>
+     最后干脆
+
+8.   道具异常状态：在加速道具中，我设置成每一次都增加`0.3* playerSpeed`,并且5s后减少`0.3*playerSpeed`,但是问题是：如果角色角色捡到一个道具，速度变为1.3，效果消失后变为1.3*0.7= 0.91. 当同时捡到多个加速道具时，bug更加严重。 更改为：增加一个常量，或者让减少的数值和增加的一致即可。
+
+9.   程序崩溃： 在角色死亡或者游戏胜利的时候都会出现回到MainMenu但是线程崩溃的情况。 经过多轮调试，发现问题应该出现在下面这个函数中：<a name="error">  </a>
 
      ```cpp
      void GameManager::switchToMainMenu()
@@ -197,11 +203,14 @@ date: 2025-05-04
 
      经过研究发现，程序中有几处（特别是
 
+10.   又出现了程序崩溃的bug。。。以下是使用了调试工具显示的内容
+
+      <img src="https://yamapicgo.oss-cn-nanjing.aliyuncs.com/picgoImage/image-20250505162757406.png" alt="image-20250505162757406" style="zoom:50%;" />
+
+![image-20250505164046777](https://yamapicgo.oss-cn-nanjing.aliyuncs.com/picgoImage/image-20250505164046777.png)
+
+​	甚至无法关闭程序。。
      
-
-
-
-​	
 
 
 
@@ -270,8 +279,14 @@ date: 2025-05-04
      //具体计算每一个刀的位置：
      ```
 
+     5.5更新：角色的刀的位置一直很奇怪
+
+     <img src="https://yamapicgo.oss-cn-nanjing.aliyuncs.com/picgoImage/image-20250505161759552.png" alt="image-20250505161759552" style="zoom:25%;" />在paint函数中我多次尝试修改，但是越来越怪。随后加入上图的boundingRect画的Ellipse，进行调试，发现的确应该是刀的位置偏了。
+
 3.   最近用户查找算法
 
      其实就是暴力遍历
 
 4.   “智能”NPC算法
+
+     

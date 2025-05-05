@@ -14,6 +14,7 @@ SOURCES += \
     MainMenu.cpp \
     Player.cpp \
     Prop.cpp \
+    ScorePanel.cpp \
     main.cpp
 
 HEADERS += \
@@ -21,10 +22,12 @@ HEADERS += \
     GameScene.h \
     MainMenu.h \
     Player.h \
-    Prop.h
+    Prop.h \
+    ScorePanel.h
 
 FORMS += \
-    MainMenu.ui
+    MainMenu.ui \
+    ScorePanel.ui
 
 # Default rules for deployment.
 qnx: target.path = /tmp/$${TARGET}/bin

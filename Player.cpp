@@ -33,9 +33,9 @@ Player::Player(QPointF pos, QGraphicsItem *parent)
 }
 QPointF Player::calculateKinvesPosition(qreal alpha)
 {
-    QSize frameSize = currentFrame.size();
     QPoint center = QPoint(0, 0);
-    qreal radius = frameSize.width();
+    QRect rect = kinfeImage.rect();
+    qreal radius = (boundingRect().width() + rect.width()) / 2;
     qreal rad = qDegreesToRadians(alpha); // Qt 自带函数，自动处理弧度转换
     qreal x = center.x() + radius * qSin(rad);
     qreal y = center.y() + radius * qCos(rad);
@@ -60,7 +60,11 @@ void Player::updateState(qreal time, QPointF center, qreal radius)
 QPainterPath Player::shape() const
 {
     QPainterPath p;
-    p.addEllipse(-80, -80, 160, 160); // 这个数值也是测量出来的，这个样子比较符合游戏情境
+    qreal radius = this->boundingRect().width() / 2;
+    p.addEllipse(-radius,
+                 -radius,
+                 2 * radius,
+                 2 * radius); // 这个数值也是测量出来的，这个样子比较符合游戏情境
     return p;
 }
 void Player::updateGif()
@@ -76,9 +80,10 @@ void Player::updateGif()
 void Player::paint(QPainter *painter, const QStyleOptionGraphicsItem *, QWidget *)
 {
     //调试用的两行
-    // painter->setBrush(Qt::red);
-    //  painter->drawRect(boundingRect());
+    //这个是角色的范围
 
+    painter->setBrush(Qt::red);
+    painter->drawEllipse(boundingRect());
     if (!currentFrame.isNull()) {
         QSize frameSize = currentFrame.size();
         QPoint center = QPoint(-frameSize.width() / 2, -frameSize.height() / 2);
@@ -86,7 +91,14 @@ void Player::paint(QPainter *painter, const QStyleOptionGraphicsItem *, QWidget 
         if (numOfKinves > 0) {
             qreal per = 360 / numOfKinves;
             for (int i = 0; i < numOfKinves; i++) {
-                painter->drawPixmap(calculateKinvesPosition(startAlpha + per * i), kinfeImage);
+                QPointF point = calculateKinvesPosition(startAlpha + per * i);
+                //painter->save();
+                //painter->rotate( per * i);
+                // painter->translate(point);
+                // painter->rotate(startAlpha + per * i);
+                painter->drawPixmap(point, kinfeImage); //5.5日，放弃旋转刀的想法
+                // painter->translate(-point);
+                //painter->restore();
             }
             startAlpha = (startAlpha + 2) % 360;
         }
@@ -118,6 +130,21 @@ QRectF Player::boundingRect() const
 void Player::extracted(QList<QGraphicsItem *> &items)
 {
     for (auto item : items) {
+        if (dynamic_cast<Player *>(item) != nullptr) {
+            Player *player = dynamic_cast<Player *>(item);
+            if (!closeAttack) {
+                this->attack(player);
+                qDebug() << "Attack in close";
+                QPointer<Player> temp = this;
+                QTimer::singleShot(200, [temp]() {
+                    if (temp) {
+                        temp->closeAttack = false;
+                    }
+                });
+            }
+            closeAttack = true;
+        }
+
         if (dynamic_cast<BloodBottle *>(item) != nullptr) {
             addBlood(1);
             // 检查道具是否还在场景中
@@ -138,17 +165,18 @@ void Player::extracted(QList<QGraphicsItem *> &items)
             if (item->scene()) {
                 scene()->removeItem(item);
             }
-            addSpeed(this->playerSpeed * 0.3);
+            qreal deltaSpeed = this->playerSpeed * 0.3;
+            addSpeed(deltaSpeed);
             specialState.append(SPEEDUP);
-            
+
             // 使用QPointer监控this对象，防止定时器触发时对象已被销毁
             QPointer<Player> weakThis = this;
-            QTimer::singleShot(5000, [weakThis]() {
+            QTimer::singleShot(5000, [weakThis, deltaSpeed]() {
                 // 检查对象是否仍然存在
                 if (!weakThis) {
                     return;
                 }
-                weakThis->addSpeed(-weakThis->playerSpeed * 0.3); //return to the normal state;
+                weakThis->addSpeed(-deltaSpeed); //return to the normal state;
                 if (weakThis->specialState.contains(SPEEDUP)) {
                     weakThis->specialState.removeAll(SPEEDUP);
                 };
@@ -160,7 +188,7 @@ void Player::extracted(QList<QGraphicsItem *> &items)
             addAttack(1);
             this->kinfeImage = QPixmap(":/images/Props/knife-2.png");
             specialState.append(ATTACKUP);
-            
+
             // 使用QPointer监控this对象，防止定时器触发时对象已被销毁
             QPointer<Player> weakThis = this;
             QTimer::singleShot(3000, [weakThis]() {
@@ -420,6 +448,7 @@ void NPC::updateState(qreal time, QPointF center, qreal radius)
 
 void NPC::goDie()
 {
+    //=====================WARNING: 在player这一抽象层只关心实现，已经将所有removeItem，disConnect，delete等逻辑放在了上面一层（gameScene）===========//
     if (!isAlive)
         return;
         
@@ -431,7 +460,7 @@ void NPC::goDie()
         emit playerDied(this);
         return;
     }
-    
+    //这里的逻辑有点冗余，是之前崩溃的时候加的，即是程序崩溃的时候加的检查，也是我崩溃的时候加的代码。
     currentGif = dieGifs[0];
     if (currentGif == nullptr) {
         qDebug() << "ERROR: 死亡动画为空";
@@ -439,13 +468,13 @@ void NPC::goDie()
         emit playerDied(this);
         return;
     }
-    
+
     if (currentGif->isValid()) {
         currentGif->start();
     } else {
         qDebug() << "ERROR: 死亡动画无效";
     }
-    
+
     // 确保只处理一次死亡
     isAlive = false;
     emit playerDied(this);

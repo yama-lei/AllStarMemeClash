@@ -43,6 +43,11 @@ public:
     Knife(QPointF pos, QGraphicsObject* parent = nullptr);
 };
 
+class KnifeToAttack : public Prop
+{
+public:
+    KnifeToAttack(QPointF pos, QGraphicsObject* parent = nullptr);
+};
 class Boot : public Prop
 {
 public:
@@ -54,4 +59,5 @@ class KnifeStrong : public Prop
 public:
     KnifeStrong(QPointF pos, QGraphicsObject* parent = nullptr);
 };
+
 #endif // PROP_H

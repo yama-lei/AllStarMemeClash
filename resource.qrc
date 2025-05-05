@@ -29,5 +29,6 @@
         <file>images/effect/health.png</file>
         <file>images/effect/strength.png</file>
         <file>images/effect/strengthUp.png</file>
+        <file>images/cover.png</file>
     </qresource>
 </RCC>

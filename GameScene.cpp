@@ -178,16 +178,7 @@ void GameScene::initProps()
         }
     }
 
-    for (int i = 0; i < 0; i++) {
-        Prop* prop = new Bushes(randomPositionInCircle(sceneCenter, safetyZoneRadius));
-        if (prop) {
-            props.append(prop);
-            scene->addItem(prop);
-            allItems.append(prop);
-        }
-    }
-
-    for (int i = 0; i < 5; i++) {
+    for (int i = 0; i < 15; i++) {
         Prop* prop = new Boot(randomPositionInCircle(sceneCenter, safetyZoneRadius));
         if (prop) {
             props.append(prop);
@@ -198,6 +189,15 @@ void GameScene::initProps()
 
     for (int i = 0; i < 5; i++) {
         Prop* prop = new KnifeStrong(randomPositionInCircle(sceneCenter, safetyZoneRadius));
+        if (prop) {
+            props.append(prop);
+            scene->addItem(prop);
+            allItems.append(prop);
+        }
+    }
+
+    for (int i = 0; i < 2; i++) {
+        Prop *prop = new Bushes(randomPositionInCircle(sceneCenter, safetyZoneRadius));
         if (prop) {
             props.append(prop);
             scene->addItem(prop);
@@ -235,7 +235,7 @@ GameScene::~GameScene()
 void GameScene::keyPressEvent(QKeyEvent *event)
 {
     pressedKeys.insert(event->key());
-    qDebug() << "The key " << event->key() << " is pressed!";
+    // qDebug() << "The key " << event->key() << " is pressed!";
     QWidget::keyPressEvent(event);
 }
 
@@ -244,8 +244,8 @@ void GameScene::keyReleaseEvent(QKeyEvent *event)
     if (pressedKeys.contains(event->key())) {
         pressedKeys.remove(event->key());
     }
-    qDebug() << "The key " << event->key() << " is released!";
-    
+    // qDebug() << "The key " << event->key() << " is released!";
+
     if (user) {
         switch (event->key()) {
         case Qt::Key_A:
@@ -258,7 +258,7 @@ void GameScene::keyReleaseEvent(QKeyEvent *event)
             break;
         }
     }
-    
+
     QWidget::keyReleaseEvent(event);
 }
 
@@ -270,9 +270,14 @@ void GameScene::mousePressEvent(QMouseEvent *event)
     
     if (event->button() == Qt::LeftButton) {
         QPair<Player *, qreal> pair = closestEnemy(user);
-        if (pair.first != nullptr && pair.second <= 600) {
+        if (pair.first != nullptr && pair.second <= 1800) {
             qDebug() << "Close Enough! Attack!";
             user->attack(pair.first);
+            Prop *newKnife = new Knife(user->pos());
+            scene->addItem(newKnife);
+            allItems.append(newKnife);
+            flyingKnives.append(
+                FlyingProp(QPair<QPointF, QPointF>(user->pos(), pair.first->pos()), newKnife));
         }
     }
     if (event->button() == Qt::RightButton) {
@@ -343,15 +348,17 @@ void GameScene::updateGame()
         }
     }
     shrinkSafetyZone();
+    updateFlyingProp(delta);
     //-----------------Update-------------------//
     for (auto player : std::as_const(players)) {
         player->updateState(delta, sceneCenter, safetyZoneRadius);
     }
 
     view->centerOn(user);
+    //这里先保留吧，可能用得上，这里原先的逻辑是所有的人之间都要画线,现在加了一个只有player==user才能
     for (auto player : std::as_const(players)) {
         QPair<Player *, qreal> pair = closestEnemy(player);
-        if (pair.first != nullptr && pair.second <= 600) {
+        if (player == user && pair.first != nullptr && pair.second <= 1800) {
             QGraphicsLineItem *line = new QGraphicsLineItem(
                 QLineF(player->pos(), pair.first->pos()));
             QPen pen(Qt::red);
@@ -377,7 +384,7 @@ void GameScene::updateGame()
                 }
                 delete line;
             });
-            
+
             qreal q = QRandomGenerator::global()->generateDouble();
             if (q <= 0.02) {
                 //NPC automatically attack each other;
@@ -402,6 +409,7 @@ void GameScene::shrinkSafetyZone()
 void GameScene::handlePlayerDeath(Player *player)
 {
     // 增加安全检查
+    qDebug() << "handlePlayerDeath is called";
     if (!player) {
         return;
     }
@@ -409,13 +417,17 @@ void GameScene::handlePlayerDeath(Player *player)
     if (!players.contains(player)) {
         return;
     }
-
-    player->disconnect(this); // 断开所有连接到this的信号
-
+    player->disconnect(this);
     players.removeOne(player);
-    qDebug() << "玩家已从游戏中移除";
+    // 玩家在allItem里面有备份，所以不用担心瞎删除
 
-    // 玩家在allItem里面有备份，所以不要瞎删除
+    QPointer<QGraphicsScene> weakScene = scene;
+    QTimer::singleShot(1000, [weakScene, player]() {
+        if (player->scene() == weakScene) {
+            weakScene->removeItem(player);
+        }
+    });
+    qDebug() << "handlePlayerDeath success";
 }
 
 QPair<Player *, qreal> GameScene::closestEnemy(Player *player)
@@ -460,9 +472,31 @@ void GameScene::paintEvent(QPaintEvent *event)
             continue;
 
         QPair<Player *, qreal> pair = closestEnemy(user);
-        if (pair.first != nullptr && pair.second <= 600) {
+        if (pair.first != nullptr && pair.second <= 1800) {
             QPointF start = view->mapFromScene(player->pos());
             QPointF end = view->mapFromScene(pair.first->pos());
+        }
+    }
+}
+
+void GameScene::updateFlyingProp(qreal time)
+{
+    qDebug() << "update flying props";
+    for (auto temp : std::as_const(flyingKnives)) {
+        Prop *prop = temp.second;
+        QPointF start = temp.first.first, end = temp.first.second;
+        QPointF move = end - start;
+        qreal dis = sqrt(move.x() * move.x() + move.x() * move.x());
+        qreal cos = move.x() / dis;
+        qreal sin = move.y() / dis;
+        if (backImage_normal->contains(prop->pos())) {
+            prop->setPos(prop->pos()
+                         + QPointF(time * flyingPropSpeed * cos / 1000,
+                                   time * flyingPropSpeed * sin / 1000));
+            qDebug() << prop->pos();
+        } else {
+            prop->hide();
+            flyingKnives.removeAll(temp);
         }
     }
 }

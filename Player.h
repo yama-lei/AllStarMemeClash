@@ -16,6 +16,7 @@ class Player : public QGraphicsObject
 protected:
     qreal timeAccumulator = 0; //这个东西专门用于给角色自动恢复刀的数量；
     bool isAlive = true;
+    bool closeAttack = false; //专门用于每秒最多5下的攻击
     int numOfKinves = 4;
     int startAlpha = 0; // 第一把刀的角度
     static QList<QMovie*> movingGifs;
@@ -58,7 +59,7 @@ public:
     void attack(Player* other);
     QPainterPath shape() const override;
     QPointF calculateKinvesPosition(qreal alpha);
-    void goDie();
+    virtual void goDie();
     bool isPlayerAlive() const { return isAlive; }
 
 public slots:
@@ -76,7 +77,7 @@ public:
     void updateState(qreal delta, QPointF center, qreal radius) override;
     void handleKeyPressEvent(QKeyEvent* evnet);
     void handleKeyReleaseEvent(QKeyEvent* event);
-    void goDie();
+    void goDie() override;
     void onDeathAnimationEnd();
 signals:
     void userDie();
@@ -89,7 +90,7 @@ public:
     void updateState(qreal delta, QPointF center, qreal radius) override;
     void handleKeyPressEvent(QKeyEvent* evnet);
     void handleKeyReleaseEvent(QKeyEvent* event);
-    void goDie();
+    void goDie() override;
 };
 
 #endif // PLAYER_H
