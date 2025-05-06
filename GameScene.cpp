@@ -155,6 +155,7 @@ void GameScene::initPlayers()
             win = false;
             endGame();
         });
+        connect(user, &User::shootKnives, this, &GameScene::handleShootKnives);
         players.append(user);
         scene->addItem(user);
         allItems.append(user);
@@ -164,6 +165,7 @@ void GameScene::initPlayers()
         NPC *npc = new NPC(randomPositionInCircle(sceneCenter, safetyZoneRadius));
         if (npc) {
             connect(npc, &Player::playerDied, this, &GameScene::handlePlayerDeath);
+            connect(npc, &NPC::shootKnives, this, &GameScene::handleShootKnives);
             players.append(npc);
             scene->addItem(npc);
             allItems.append(npc);
@@ -281,21 +283,16 @@ void GameScene::mousePressEvent(QMouseEvent *event)
     
     if (event->button() == Qt::LeftButton) {
         QPair<Player *, qreal> pair = closestEnemy(user);
-        if (pair.first != nullptr && pair.second <= 1800) {
+        if (pair.first != nullptr && pair.second <= 1200) {
             qDebug() << "Close Enough! Attack!";
             //注意：这个地方是
             //user->attack(pair.first);
-            if (user->shootKnives()) {
-                Prop *newKnife = new KnifeToAttack(user->pos(), user);
-                scene->addItem(newKnife);
-                allItems.append(newKnife);
-                flyingKnives.append(
-                    FlyingProp(QPair<QPointF, QPointF>(user->pos(), pair.first->pos()), newKnife));
+            if (user->shootKnives(user, pair.first)) {
             }
         }
-    }
     if (event->button() == Qt::RightButton) {
         user->addBlood(-10); //最后记得删掉，这个是自己调试使用的
+    }
     }
 }
 
@@ -373,7 +370,7 @@ void GameScene::updateGame()
     //这里先保留吧，可能用得上，这里原先的逻辑是所有的人之间都要画线,现在加了一个只有player==user才能
     for (auto player : std::as_const(players)) {
         QPair<Player *, qreal> pair = closestEnemy(player);
-        if (player == user && pair.first != nullptr && pair.second <= 1800) {
+        if (player == user && pair.first != nullptr && pair.second <= 1200) {
             QGraphicsLineItem *line = new QGraphicsLineItem(
                 QLineF(player->pos(), pair.first->pos()));
             QPen pen(Qt::red);
@@ -381,7 +378,6 @@ void GameScene::updateGame()
             pen.setStyle(Qt::DashDotLine);
             line->setPen(pen);
             scene->addItem(line);
-            
             // 防止场景被删除时出现空指针访问
             QPointer<QGraphicsScene> weakScene = scene;
             // 不能使用QPointer处理QGraphicsLineItem，因为它不是QObject的子类
@@ -392,20 +388,20 @@ void GameScene::updateGame()
                     delete line; // 无论如何都要删除线条，避免内存泄漏
                     return;
                 }
-                
                 // 如果线条仍在场景中，从场景中移除
                 if (line->scene() == weakScene) {
                     weakScene->removeItem(line);
                 }
                 delete line;
             });
+        }
+        if (player != user) {
+            NPC *npc = dynamic_cast<NPC *>(player);
+            if (npc->target == nullptr) {
+                npc->setTarget(pair.first);
+            //下面这这一行使多余的，因为在setTarget的时候已经调用过一次了
+            //  emit player->shootKnives(player, pair.first);
 
-            qreal q = QRandomGenerator::global()->generateDouble();
-            if (q <= 0.02) {
-                //NPC automatically attack each other;
-                if (player != user) {
-                    player->attack(pair.first);
-                }
             }
         }
     }
@@ -498,7 +494,7 @@ void GameScene::paintEvent(QPaintEvent *event)
             continue;
 
         QPair<Player *, qreal> pair = closestEnemy(user);
-        if (pair.first != nullptr && pair.second <= 1800) {
+        if (pair.first != nullptr && pair.second <= 1200) {
             QPointF start = view->mapFromScene(player->pos());
             QPointF end = view->mapFromScene(pair.first->pos());
         }
@@ -539,4 +535,17 @@ void GameScene::updateFlyingProp(qreal time)
     for (const auto &prop : propsToRemove) {
         flyingKnives.removeAll(prop);
     }
+}
+
+void GameScene::handleShootKnives(Player *sender, Player *target)
+{
+    qDebug() << "shoot knives";
+    if (dynamic_cast<NPC *>(sender) != nullptr) {
+        QPointer<NPC> npc = dynamic_cast<NPC *>(sender);
+        QTimer::singleShot(1000, npc, [npc]() { npc->setTarget(nullptr); });
+    }
+    Prop *newKnife = new KnifeToAttack(sender->pos(), sender, sender->getKnifeImage());
+    scene->addItem(newKnife);
+    allItems.append(newKnife);
+    flyingKnives.append(FlyingProp(QPair<QPointF, QPointF>(sender->pos(), target->pos()), newKnife));
 }

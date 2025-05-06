@@ -77,11 +77,25 @@ date: 2025-05-04
 
 8.   道具异常状态：在加速道具中，我设置成每一次都增加`0.3* playerSpeed`,并且5s后减少`0.3*playerSpeed`,但是问题是：如果角色角色捡到一个道具，速度变为1.3，效果消失后变为1.3*0.7= 0.91. 当同时捡到多个加速道具时，bug更加严重。 更改为：增加一个常量，或者让减少的数值和增加的一致即可。
 
-9.   飞行的刀具无法显示
+9.   飞行的刀具无法显示（后来发现是被自己给捡到了。。）
 
-     
+10.   NPC飞行的刀具随着时间积累越来越多，出现了发出好几十条的盛况。
 
-10.   程序崩溃： 在角色死亡或者游戏胜利的时候都会出现回到MainMenu但是线程崩溃的情况。 经过多轮调试，发现问题应该出现在下面这个函数中：<a name="error">  </a>
+      结果发现是多次触发了同一信号。
+
+      ```cpp
+          if (npc->target == nullptr) {
+                 npc->setTarget(pair.first);
+                  //下面这这一行使多余的，因为在setTarget的时候已经调用过一次了
+                  //  emit player->shootKnives(player, pair.first);
+              }
+      ```
+
+      
+
+      
+
+11.   程序崩溃： 在角色死亡或者游戏胜利的时候都会出现回到MainMenu但是线程崩溃的情况。 经过多轮调试，发现问题应该出现在下面这个函数中：<a name="error">  </a>
 
       ```cpp
       void GameManager::switchToMainMenu()
@@ -207,7 +221,7 @@ date: 2025-05-04
 
       经过研究发现，程序中有几处（特别是
 
-11.   又出现了程序崩溃的bug。。。以下是使用了调试工具显示的内容
+12.   又出现了程序崩溃的bug。。。以下是使用了调试工具显示的内容
 
       <img src="https://yamapicgo.oss-cn-nanjing.aliyuncs.com/picgoImage/image-20250505162757406.png" alt="image-20250505162757406" style="zoom:50%;" />
 

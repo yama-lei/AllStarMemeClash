@@ -49,7 +49,10 @@ class KnifeToAttack : public Prop
     Player* owner;
 
 public:
-    KnifeToAttack(QPointF pos, Player* owner, QGraphicsObject* parent = nullptr);
+    KnifeToAttack(QPointF pos,
+                  Player* owner,
+                  QPixmap knifeImage = QPixmap(),
+                  QGraphicsObject* parent = nullptr);
     Player* getOwner();
 };
 class Boot : public Prop

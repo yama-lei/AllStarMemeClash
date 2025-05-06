@@ -47,6 +47,7 @@ private slots:
 
 public slots:
     void updateGame();
+    void handleShootKnives(Player* sender, Player* target);
 
 public:
     explicit GameScene(QWidget *parent = nullptr);

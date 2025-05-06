@@ -30,6 +30,7 @@ protected:
     QPixmap currentFrame;
     QPixmap kinfeImage;
     //--- 游戏属性--、、
+    const int defaultPlayerBlood = 12;
     int playerBlood = 12;
     qreal playerSpeed = 1200;
     int attackPower = 1;
@@ -56,18 +57,18 @@ public:
         }
     } //注意这个地方是不再增加而不是不再减少，改减少的时候还是要减少
     void addAttack(int a) { attackPower += a; };
-    bool shootKnives();
     void attack(Player* other);
     QPainterPath shape() const override;
     QPointF calculateKinvesPosition(qreal alpha);
     virtual void goDie();
     bool isPlayerAlive() const { return isAlive; }
-
+    QPixmap getKnifeImage() { return kinfeImage; }
 public slots:
     void updateGif();
     void onDeathAnimationEnd();
 signals:
     void playerDied(Player* player);
+    bool shootKnives(Player* sender, Player* target);
 };
 
 class User : public Player
@@ -92,6 +93,8 @@ public:
     void handleKeyPressEvent(QKeyEvent* evnet);
     void handleKeyReleaseEvent(QKeyEvent* event);
     void goDie() override;
+    void setTarget(Player* enemy);
+    Player* target = nullptr;
 };
 
 #endif // PLAYER_H

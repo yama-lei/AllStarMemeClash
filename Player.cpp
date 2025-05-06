@@ -107,16 +107,27 @@ void Player::paint(QPainter *painter, const QStyleOptionGraphicsItem *, QWidget 
         }
         painter->setFont(QFont("Arial", 24, QFont::Bold));
         QString text = QString("HP: %1, Knives: %2").arg(playerBlood).arg(numOfKinves);
-        painter->drawText(-100, center.y(), text);
+        painter->drawText(-boundingRect().width() / 2, boundingRect().top(), text);
+        //bloodBar
+        if (playerBlood > 0) {
+            qreal bloodBarWidth = 400, bloodBarHeight = 20;
+            QRect bloodBar(boundingRect().left(),
+                           boundingRect().top(),
+                           bloodBarWidth * playerBlood / defaultPlayerBlood,
+                           bloodBarHeight);
+            painter->setBrush(Qt::red);
+            painter->drawRect(bloodBar);
+        }
+        qreal functionalBarHeight = boundingRect().top() - 80;
 
         if (specialState.contains(ATTACKUP)) {
-            painter->drawPixmap(center - QPointF(70, 0), QPixmap(":/images/effect/strengthUp.png"));
+            painter->drawPixmap(-70, functionalBarHeight, QPixmap(":/images/effect/strengthUp.png"));
         }
         if (specialState.contains(SPEEDUP)) {
-            painter->drawPixmap(center, QPixmap(":/images/effect/fast.png"));
+            painter->drawPixmap(0, functionalBarHeight, QPixmap(":/images/effect/fast.png"));
         }
         if (specialState.contains(HEALTHUP)) {
-            painter->drawPixmap(center, QPixmap(":/images/effect/healthup.png"));
+            painter->drawPixmap(70, functionalBarHeight, QPixmap(":/images/effect/healthup.png"));
         }
         if (specialState.contains(HEALTHDOWN)) {
             painter->drawPixmap(center, QPixmap(":/images/effect/healthdown.png"));
@@ -125,16 +136,6 @@ void Player::paint(QPainter *painter, const QStyleOptionGraphicsItem *, QWidget 
         painter->setBrush(Qt::red);
         painter->drawRect(boundingRect());
         //出现错误地时候这样显示图像
-    }
-}
-
-bool Player::shootKnives()
-{
-    if (numOfKinves <= 0) {
-        return false;
-    } else {
-        numOfKinves -= 1;
-        return true;
     }
 }
 
@@ -541,4 +542,17 @@ void Player::attack(Player *other)
     }
 
     //之后要加入特效
+}
+
+void NPC::setTarget(Player *enemy)
+{
+    //注意：这里设计的是每一次更新NPC target只有两种情况：1. target为nullptr在gameScene中被重新赋值为一个新的对象 2. 找到一个新的对象了之后set a timer 将target改为nullptr指导下一次找到目标
+    target = enemy;
+    if (target != nullptr) {
+        QPointer<Player> weakThis = this;
+        auto tmp = target; //这里写的不是很规范，因为不能直接capture this->target.无奈之举
+        QTimer::singleShot(1000, weakThis, [weakThis, tmp]() {
+            weakThis->shootKnives(weakThis, tmp);
+        });
+    }
 }

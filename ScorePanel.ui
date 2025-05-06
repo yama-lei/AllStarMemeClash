@@ -57,7 +57,7 @@ border: 2px solid #E2E8F0;
    <property name="geometry">
     <rect>
      <x>520</x>
-     <y>480</y>
+     <y>500</y>
      <width>201</width>
      <height>51</height>
     </rect>
@@ -86,9 +86,9 @@ border: 2px solid #E2E8F0;
   <widget class="QTextEdit" name="plainText">
    <property name="geometry">
     <rect>
-     <x>390</x>
+     <x>300</x>
      <y>130</y>
-     <width>481</width>
+     <width>651</width>
      <height>341</height>
     </rect>
    </property>
@@ -99,9 +99,9 @@ border: 2px solid #E2E8F0;
   <widget class="QTextEdit" name="winOrLoseText">
    <property name="geometry">
     <rect>
-     <x>460</x>
+     <x>350</x>
      <y>160</y>
-     <width>331</width>
+     <width>571</width>
      <height>71</height>
     </rect>
    </property>

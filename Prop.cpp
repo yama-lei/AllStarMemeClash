@@ -49,11 +49,15 @@ Knife::Knife(QPointF pos, QGraphicsObject* parent)
     image = QPixmap(":/images/Props/fc403.png");
 }
 
-KnifeToAttack::KnifeToAttack(QPointF pos, Player* owner, QGraphicsObject* parent)
+KnifeToAttack::KnifeToAttack(QPointF pos, Player* owner, QPixmap knifeImage, QGraphicsObject* parent)
     : Prop(pos, parent)
     , owner(owner)
 {
-    image = QPixmap(":/images/Props/fc403.png");
+    if (knifeImage.isNull()) {
+        image = QPixmap(":/images/Props/fc403.png");
+    } else {
+        image = knifeImage;
+    }
 }
 
 Player* KnifeToAttack::getOwner()
