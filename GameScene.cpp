@@ -14,10 +14,9 @@ GameScene::GameScene(QWidget *parent)
     : QWidget(parent)
 {
     //------------------初始化-----------//
-
+    currentPlayers = allPlayers;
     setFocusPolicy(Qt::StrongFocus);
     setFocus();
-
     scene = new QGraphicsScene(this);
     scene->setSceneRect(0, 0, SCENE.width(), SCENE.height());
     view = new QGraphicsView(this);
@@ -53,7 +52,8 @@ void GameScene::startGame()
     // 2025-5-4: 此处逻辑可能有些混乱，简而言之，是保险起见，多次删除场景的道具和人物（有检查的）
 
     gameOn = false;
-
+    gameTime = 0;
+    currentPlayers = allPlayers;
     for (auto item : std::as_const(allItems)) {
         if (item != nullptr) {
             scene->removeItem(item);
@@ -85,6 +85,7 @@ void GameScene::startGame()
     }
     elapsedTimer = new QElapsedTimer();
     elapsedTimer->start();
+
     initPlayers();
     initProps();
     gameOn = true;
@@ -93,7 +94,7 @@ void GameScene::startGame()
     }
 }
 
-void GameScene::endGame(bool win)
+void GameScene::endGame()
 {
     if (win) {
         qDebug() << "User win";
@@ -107,47 +108,59 @@ void GameScene::endGame(bool win)
     // 停止并清理定时器
     if (timer) {
         // 断开连接是安全的，即使定时器已无效
+        timer->stop(); // 先停止定时器
         disconnect(timer, &QTimer::timeout, this, &GameScene::updateGame);
         
         // 永远不直接删除timer，而是使用deleteLater
         timer->deleteLater();
         timer = nullptr;
     }
+
+    // 确保在删除对象前不再有任何未处理的事件
+    QCoreApplication::processEvents();
+
     if (elapsedTimer) {
         delete elapsedTimer;
         elapsedTimer = nullptr;
     }
     pressedKeys.clear();
-    for (auto item : std::as_const(allItems)) {
+    QList<QGraphicsObject *> itemsToRemove = allItems;
+    for (auto item : std::as_const(itemsToRemove)) {
         if (item != nullptr) {
-            // 让Qt的事件循环安全地删除对象
+            if (scene && item->scene() == scene) {
+                scene->removeItem(item);
+            }
             item->deleteLater();
         }
     }
     allItems.clear();
     players.clear();
     props.clear();
-
-    scaleRate = 1; //回到原先的安全区大小
+    flyingKnives.clear();
+    scaleRate = 1;
     if (backImage_normal) {
         backImage_normal->setScale(scaleRate);
     }
     safetyZoneRadius = scene->width() / 2 * scaleRate;
 
-    emit gameOverSignal(win);
+    // 使用QTimer::singleShot延迟发送信号，确保所有删除操作已完成
+    QTimer::singleShot(1000, this, [this]() { emit gameOverSignal(); });
 }
 
 void GameScene::initPlayers()
 {
     user = new User(randomPositionInCircle(sceneCenter, safetyZoneRadius));
     if (user) {
-        connect(user, &User::userDie, [this]() { endGame(0); });
+        connect(user, &User::userDie, [this]() {
+            win = false;
+            endGame();
+        });
         players.append(user);
         scene->addItem(user);
         allItems.append(user);
     }
 
-    for (int i = 0; i < 3; i++) {
+    for (int i = 0; i < allPlayers - 1; i++) {
         NPC *npc = new NPC(randomPositionInCircle(sceneCenter, safetyZoneRadius));
         if (npc) {
             connect(npc, &Player::playerDied, this, &GameScene::handlePlayerDeath);
@@ -169,7 +182,7 @@ void GameScene::initProps()
         }
     }
 
-    for (int i = 0; i < 5; i++) {
+    for (int i = 0; i < 50; i++) {
         Prop* prop = new Knife(randomPositionInCircle(sceneCenter, safetyZoneRadius));
         if (prop) {
             props.append(prop);
@@ -196,7 +209,7 @@ void GameScene::initProps()
         }
     }
 
-    for (int i = 0; i < 2; i++) {
+    for (int i = 0; i < 3; i++) {
         Prop *prop = new Bushes(randomPositionInCircle(sceneCenter, safetyZoneRadius));
         if (prop) {
             props.append(prop);
@@ -220,7 +233,6 @@ GameScene::~GameScene()
         delete elapsedTimer;
         elapsedTimer = nullptr;
     }
-
     if (scene) {
         scene->clear();
     }
@@ -231,7 +243,6 @@ GameScene::~GameScene()
     }
     allItems.clear();
 }
-
 void GameScene::keyPressEvent(QKeyEvent *event)
 {
     pressedKeys.insert(event->key());
@@ -272,16 +283,19 @@ void GameScene::mousePressEvent(QMouseEvent *event)
         QPair<Player *, qreal> pair = closestEnemy(user);
         if (pair.first != nullptr && pair.second <= 1800) {
             qDebug() << "Close Enough! Attack!";
-            user->attack(pair.first);
-            Prop *newKnife = new Knife(user->pos());
-            scene->addItem(newKnife);
-            allItems.append(newKnife);
-            flyingKnives.append(
-                FlyingProp(QPair<QPointF, QPointF>(user->pos(), pair.first->pos()), newKnife));
+            //注意：这个地方是
+            //user->attack(pair.first);
+            if (user->shootKnives()) {
+                Prop *newKnife = new KnifeToAttack(user->pos(), user);
+                scene->addItem(newKnife);
+                allItems.append(newKnife);
+                flyingKnives.append(
+                    FlyingProp(QPair<QPointF, QPointF>(user->pos(), pair.first->pos()), newKnife));
+            }
         }
     }
     if (event->button() == Qt::RightButton) {
-        user->addBlood(-10);
+        user->addBlood(-10); //最后记得删掉，这个是自己调试使用的
     }
 }
 
@@ -292,7 +306,8 @@ void GameScene::updateGame()
     }
 
     if (players.size() == 1 && players.contains(user)) {
-        endGame(true);
+        win = true;
+        endGame();
         return;
     }
 
@@ -303,7 +318,7 @@ void GameScene::updateGame()
         elapsedTimer = new QElapsedTimer();
         elapsedTimer->start();
     }
-
+    gameTime += delta;
     //-----------------------处理按钮----------------------//
     QList<int> keyMove;
     for (auto it = pressedKeys.begin(); it != pressedKeys.end(); it++) {
@@ -409,6 +424,8 @@ void GameScene::shrinkSafetyZone()
 void GameScene::handlePlayerDeath(Player *player)
 {
     // 增加安全检查
+
+    currentPlayers -= 1;
     qDebug() << "handlePlayerDeath is called";
     if (!player) {
         return;
@@ -417,14 +434,23 @@ void GameScene::handlePlayerDeath(Player *player)
     if (!players.contains(player)) {
         return;
     }
+    
+    // 断开所有连接，防止回调调用已删除的对象
     player->disconnect(this);
     players.removeOne(player);
     // 玩家在allItem里面有备份，所以不用担心瞎删除
 
     QPointer<QGraphicsScene> weakScene = scene;
-    QTimer::singleShot(1000, [weakScene, player]() {
-        if (player->scene() == weakScene) {
-            weakScene->removeItem(player);
+    QPointer<Player> weakPlayer = player;
+    
+    QTimer::singleShot(1000, [weakScene, weakPlayer]() {
+        // 安全检查：确保场景和玩家对象仍然有效
+        if (!weakScene || !weakPlayer) {
+            return;
+        }
+        
+        if (weakPlayer->scene() == weakScene) {
+            weakScene->removeItem(weakPlayer);
         }
     });
     qDebug() << "handlePlayerDeath success";
@@ -466,8 +492,8 @@ void GameScene::paintEvent(QPaintEvent *event)
     if (!gameOn || !user || players.isEmpty()) {
         return;
     }
-
-    for (auto player : std::as_const(players)) {
+    //这里之前是任何两个角色之间都会划线
+    /*    for (auto player : std::as_const(players)) {
         if (!player)
             continue;
 
@@ -476,27 +502,41 @@ void GameScene::paintEvent(QPaintEvent *event)
             QPointF start = view->mapFromScene(player->pos());
             QPointF end = view->mapFromScene(pair.first->pos());
         }
-    }
+    }*/
 }
 
 void GameScene::updateFlyingProp(qreal time)
 {
-    qDebug() << "update flying props";
+    //qDebug() << "update flying props";
+    QList<FlyingProp> propsToRemove;
     for (auto temp : std::as_const(flyingKnives)) {
         Prop *prop = temp.second;
+        if (!prop || !scene || prop->scene() != scene) {
+            propsToRemove.append(temp);
+            continue;
+        }
         QPointF start = temp.first.first, end = temp.first.second;
         QPointF move = end - start;
-        qreal dis = sqrt(move.x() * move.x() + move.x() * move.x());
+        qreal dis = sqrt(move.x() * move.x() + move.y() * move.y());
+        if (dis <= 0) {
+            propsToRemove.append(temp);
+            continue;
+        }
         qreal cos = move.x() / dis;
         qreal sin = move.y() / dis;
-        if (backImage_normal->contains(prop->pos())) {
+        if (backImage_normal && backImage_normal->contains(prop->pos())) {
             prop->setPos(prop->pos()
                          + QPointF(time * flyingPropSpeed * cos / 1000,
                                    time * flyingPropSpeed * sin / 1000));
             qDebug() << prop->pos();
         } else {
-            prop->hide();
-            flyingKnives.removeAll(temp);
+            if (prop) {
+                prop->hide();
+            }
+            propsToRemove.append(temp);
         }
+    }
+    for (const auto &prop : propsToRemove) {
+        flyingKnives.removeAll(prop);
     }
 }

@@ -11,7 +11,7 @@ class ScorePanel : public QWidget
 
 public:
     explicit ScorePanel(QWidget *parent = nullptr);
-    void updateGameInfo(bool win, QPair<int, int> rank, int surviveTime);
+    void updateGameInfo(bool win, int allPlayers, int rank, int surviveTime);
 signals:
     void backToMainMenu();
     void anotherGame();

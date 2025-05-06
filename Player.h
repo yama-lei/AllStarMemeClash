@@ -8,7 +8,7 @@
 #include <QThread>
 #include <QPointer>
 enum Direction { UP, DOWN, LEFT, RIGHT, STAY, LU, LD, RU, RD }; //上下左右，停，坐上左下，右上右下
-enum SpecialState { SPEEDUP, SPEEDDOWN, ATTACKUP, ATTACKDOWN, HEAHTHUP, HEATHDOWN };
+enum SpecialState { SPEEDUP, SPEEDDOWN, ATTACKUP, ATTACKDOWN, HEALTHUP, HEALTHDOWN };
 class Player : public QGraphicsObject
 {
     Q_OBJECT
@@ -30,7 +30,7 @@ protected:
     QPixmap currentFrame;
     QPixmap kinfeImage;
     //--- 游戏属性--、、
-    int playerBlood = 1;
+    int playerBlood = 12;
     qreal playerSpeed = 1200;
     int attackPower = 1;
     QList<SpecialState> specialState;
@@ -56,6 +56,7 @@ public:
         }
     } //注意这个地方是不再增加而不是不再减少，改减少的时候还是要减少
     void addAttack(int a) { attackPower += a; };
+    bool shootKnives();
     void attack(Player* other);
     QPainterPath shape() const override;
     QPointF calculateKinvesPosition(qreal alpha);

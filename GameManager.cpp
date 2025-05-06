@@ -38,6 +38,9 @@ void GameManager::switchToMainMenu()
 void GameManager::switchToScorePanel()
 {
     qDebug() << "Switch To ScorePanel";
-    scorePanel->updateGameInfo(0, QPair<int, int>(1, 1), (int) 100);
+    scorePanel->updateGameInfo(gameScene->win,
+                               gameScene->allPlayers,
+                               gameScene->currentPlayers,
+                               gameScene->gameTime);
     stackedWidget->setCurrentWidget(scorePanel);
 }

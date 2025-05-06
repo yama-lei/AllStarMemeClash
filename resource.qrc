@@ -26,9 +26,10 @@
         <file>images/Props/boot.png</file>
         <file>images/effect/fc965.png</file>
         <file>images/effect/feet.png</file>
-        <file>images/effect/health.png</file>
         <file>images/effect/strength.png</file>
         <file>images/effect/strengthUp.png</file>
         <file>images/cover.png</file>
+        <file>images/effect/healthdown.png</file>
+        <file>images/effect/healthup.png</file>
     </qresource>
 </RCC>

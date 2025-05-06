@@ -85,9 +85,12 @@ void Player::paint(QPainter *painter, const QStyleOptionGraphicsItem *, QWidget 
     painter->setBrush(Qt::red);
     painter->drawEllipse(boundingRect());
     if (!currentFrame.isNull()) {
-        QSize frameSize = currentFrame.size();
-        QPoint center = QPoint(-frameSize.width() / 2, -frameSize.height() / 2);
-        painter->drawPixmap(center, currentFrame);
+        //   QSize frameSize = currentFrame.size();
+        //QPoint center = QPoint(-frameSize.width() / 2, -frameSize.height() / 2);
+        QPointF center = boundingRect().center();
+        QRectF rect = boundingRect();
+        painter->drawPixmap(rect.center() - currentFrame.rect().center(),
+                            currentFrame); //5.6日正常成功绘画
         if (numOfKinves > 0) {
             qreal per = 360 / numOfKinves;
             for (int i = 0; i < numOfKinves; i++) {
@@ -112,10 +115,26 @@ void Player::paint(QPainter *painter, const QStyleOptionGraphicsItem *, QWidget 
         if (specialState.contains(SPEEDUP)) {
             painter->drawPixmap(center, QPixmap(":/images/effect/fast.png"));
         }
+        if (specialState.contains(HEALTHUP)) {
+            painter->drawPixmap(center, QPixmap(":/images/effect/healthup.png"));
+        }
+        if (specialState.contains(HEALTHDOWN)) {
+            painter->drawPixmap(center, QPixmap(":/images/effect/healthdown.png"));
+        }
     } else {
         painter->setBrush(Qt::red);
         painter->drawRect(boundingRect());
         //出现错误地时候这样显示图像
+    }
+}
+
+bool Player::shootKnives()
+{
+    if (numOfKinves <= 0) {
+        return false;
+    } else {
+        numOfKinves -= 1;
+        return true;
     }
 }
 
@@ -147,6 +166,14 @@ void Player::extracted(QList<QGraphicsItem *> &items)
 
         if (dynamic_cast<BloodBottle *>(item) != nullptr) {
             addBlood(1);
+            specialState.append(HEALTHUP);
+            QPointer<Player> weakPlayer = this;
+            QTimer::singleShot(1000, this, [weakPlayer]() {
+                if (weakPlayer) {
+                    weakPlayer->specialState.removeAll(HEALTHUP);
+                }
+            });
+
             // 检查道具是否还在场景中
             if (item->scene()) {
                 scene()->removeItem(item);
@@ -202,6 +229,25 @@ void Player::extracted(QList<QGraphicsItem *> &items)
                     weakThis->specialState.removeAll(ATTACKUP);
                 };
             });
+        } else if (dynamic_cast<KnifeToAttack *>(item) != nullptr) {
+            auto temp = dynamic_cast<KnifeToAttack *>(item);
+            if (this != temp->getOwner()) {
+                if (temp->getOwner()) {
+                    temp->getOwner()->attack(this);
+
+                    specialState.append(HEALTHDOWN);
+                    QPointer<Player> weakPlayer = this;
+                    QTimer::singleShot(1000, this, [weakPlayer]() {
+                        if (weakPlayer) {
+                            weakPlayer->specialState.removeAll(HEALTHDOWN);
+                        }
+                    });
+                }
+                qDebug() << "Being Attacked by flying knives";
+                if (item->scene()) {
+                    scene()->removeItem(item);
+                }
+            }
         }
     }
 }
@@ -348,28 +394,14 @@ void User::goDie()
         
     qDebug() << "I am died";
     isAlive = false;
-    
-    if (dieGifs.isEmpty()) {
-        qDebug() << "ERROR: dieGifs为空，无法显示死亡动画";
-        emit userDie();
-        return;
-    }
-    
     dieGif = dieGifs[0];
-    if (dieGif == nullptr) {
-        qDebug() << "ERROR: 死亡动画为空";
-        emit userDie();
-        return;
-    }
-    
     currentGif = dieGif;
     if (dieGif->isValid()) {
         dieGif->start();
     } else {
         qDebug() << "ERROR: 死亡动画无效";
     }
-    
-    emit userDie();
+    QTimer::singleShot(1000, this, [this]() { emit userDie(); });
 }
 
 //--------------------NPC------------------------------------------------

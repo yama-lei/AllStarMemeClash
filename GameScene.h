@@ -29,6 +29,7 @@ private:
     QGraphicsPixmapItem* backImage_poison = nullptr; //用QGraphicsPixmapItem因为Pixmap没有设置层级的功能,这个是背景毒圈
     QTimer* timer = nullptr;
     QElapsedTimer* elapsedTimer = nullptr;
+    QElapsedTimer* timerForRecord; //这个timer专门用于记录游戏时间
     void keyPressEvent(QKeyEvent* event);
     void keyReleaseEvent(QKeyEvent* event);
     QList<Player*> players;
@@ -40,6 +41,7 @@ private:
     QList<QGraphicsObject*> allItems;
     QList<QPair<QPair<QPointF, QPointF>, Prop*>> flyingKnives;
     typedef QPair<QPair<QPointF, QPointF>, Prop*> FlyingProp;
+
 private slots:
     void handlePlayerDeath(Player* player);
 
@@ -55,12 +57,18 @@ public:
     QPointF randomPositionInCircle(QPointF center, qreal maxRadius);
     void shrinkSafetyZone();
     void startGame();
-    void endGame(bool win);
+    void endGame();
     void paintEvent(QPaintEvent* event);
     void updateFlyingProp(qreal time);
-    qreal flyingPropSpeed = 10;
+    qreal flyingPropSpeed = 3000;
+    typedef QPair<QPair<int, qreal>, bool> GameInfo;
+    GameInfo showGameInfo();
+    int currentPlayers = 10;
+    const int allPlayers = 10;
+    bool win = false;
+    qreal gameTime = 0;
 signals:
-    void gameOverSignal(bool win);
+    void gameOverSignal();
 };
 
 #endif // GAMESCENE_H

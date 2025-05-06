@@ -3,6 +3,7 @@
 #include <QDebug>
 #include <QGraphicsObject>
 #include <QPainter>
+#include "Player.h"
 class Prop : public QGraphicsObject
 {
     Q_OBJECT
@@ -45,8 +46,11 @@ public:
 
 class KnifeToAttack : public Prop
 {
+    Player* owner;
+
 public:
-    KnifeToAttack(QPointF pos, QGraphicsObject* parent = nullptr);
+    KnifeToAttack(QPointF pos, Player* owner, QGraphicsObject* parent = nullptr);
+    Player* getOwner();
 };
 class Boot : public Prop
 {
