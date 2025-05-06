@@ -13,12 +13,19 @@ Player::Player(QPointF pos, QGraphicsItem *parent)
     setPos(pos);
     kinfeImage = QPixmap(":/images/Props/fc403.png");
     if (movingGifs.isEmpty()) {
-        movingGifs = {new QMovie(":/images/figures/moving1.gif"),
-                      new QMovie(":/images/figures/moving2.gif"),
-                      new QMovie(":/images/figures/moving3.gif"),
-                      new QMovie(":/images/figures/moving4.gif"),
-                      new QMovie(":/images/figures/moving5.gif"),
-                      new QMovie(":/images/figures/moving6.gif")};
+        movingGifs = {
+            new QMovie(":/images/figures/moving1.gif"),
+            new QMovie(":/images/figures/moving2.gif"),
+            new QMovie(":/images/figures/moving3.gif"),
+            new QMovie(":/images/figures/moving4.gif"),
+            new QMovie(":/images/figures/moving5.gif"),
+            new QMovie(":/images/figures/moving6.gif"),
+            //  new QMovie(":/images/figures/nailong/moving1.gif"),
+            // new QMovie(":/images/figures/nailong/moving2.gif"),
+            //  new QMovie(":/images/figures/nailong/moving3.gif"),
+            //  new QMovie(":/images/figures/nailong/death.gif"),
+            // new QMovie(":/images/figures/nailong/standing.gif"),
+        };
     }
     if (dieGifs.isEmpty()) {
         dieGifs = {
@@ -26,9 +33,11 @@ Player::Player(QPointF pos, QGraphicsItem *parent)
         };
     }
     if (standingGifs.isEmpty()) {
-        standingGifs = {new QMovie(":/images/figures/standing2.gif"),
-                        new QMovie(":/images/figures/standing3.gif"),
-                        new QMovie(":/images/figures/standing4.gif")};
+        standingGifs = {
+            new QMovie(":/images/figures/standing2.gif"),
+            new QMovie(":/images/figures/standing3.gif"),
+            new QMovie(":/images/figures/standing4.gif"),
+        };
     }
 }
 QPointF Player::calculateKinvesPosition(qreal alpha)
@@ -81,9 +90,8 @@ void Player::paint(QPainter *painter, const QStyleOptionGraphicsItem *, QWidget 
 {
     //调试用的两行
     //这个是角色的范围
-
-    painter->setBrush(Qt::red);
-    painter->drawEllipse(boundingRect());
+    //painter->setBrush(Qt::red);
+    //painter->drawEllipse(boundingRect());
     if (!currentFrame.isNull()) {
         //   QSize frameSize = currentFrame.size();
         //QPoint center = QPoint(-frameSize.width() / 2, -frameSize.height() / 2);
@@ -353,10 +361,14 @@ void User::updateState(qreal time, QPointF center, qreal radius)
     QPointF newPoint = this->pos() + step;
     qreal dis = (newPoint.x() - center.x()) * (newPoint.x() - center.x())
                 + (newPoint.y() - center.y()) * (newPoint.y() - center.y());
-
     if (radius * radius > dis) {
         moveBy(step.x(), step.y());
         //qDebug() << "r: " << radius << " dis: " << dis << " Center : " << center<< "Current Pos: " << pos();
+    } else {
+        QPointF direction = newPoint - center;
+        qreal distance = sqrt(dis);
+        QPointF boundaryPoint = center + (direction / distance) * radius;
+        setPos(boundaryPoint);
     }
     /*    if (currentRect.contains(this->pos() + step)) {
         moveBy(step.x(), step.y());
@@ -459,6 +471,11 @@ void NPC::updateState(qreal time, QPointF center, qreal radius)
     if (radius * radius > dis) {
         moveBy(step.x(), step.y());
         // qDebug() << "r: " << radius << " dis: " << dis << " Center : " << center << "Current Pos: " << pos();
+    } else {
+        QPointF direction = newPoint - center;
+        qreal distance = sqrt(dis);
+        QPointF boundaryPoint = center + (direction / distance) * radius;
+        setPos(boundaryPoint);
     }
     if (playerBlood <= 0) {
         goDie();

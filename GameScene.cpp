@@ -24,7 +24,8 @@ GameScene::GameScene(QWidget *parent)
     view->setScene(scene);
     view->resize(VIEW.width(), VIEW.height());
     view->scale(0.5, 0.5);
-    
+    rockImage = QPixmap(":/images/Props/rock.png");
+    rockImage.scaled(600, 600);
     QPixmap poisonPixmap(":/images/green.png");
     QPixmap normalPixmap(":/images/yellow.png");
     
@@ -395,15 +396,25 @@ void GameScene::updateGame()
                 delete line;
             });
         }
-        if (player != user) {
+        if (player != user && pair.second <= 1200) {
             NPC *npc = dynamic_cast<NPC *>(player);
             if (npc->target == nullptr) {
                 npc->setTarget(pair.first);
             //下面这这一行使多余的，因为在setTarget的时候已经调用过一次了
             //  emit player->shootKnives(player, pair.first);
-
             }
         }
+    }
+
+    if (gameTime / 1000 > 3 && !rockStartRolling) {
+        rockRollingDown(user->pos());
+        rockStartRolling = true;
+        QPointer<GameScene> weakThis = this;
+        QTimer::singleShot(20000, weakThis, [weakThis]() {
+            if (weakThis) {
+                weakThis->rockStartRolling = false;
+            }
+        });
     }
 }
 
@@ -548,4 +559,32 @@ void GameScene::handleShootKnives(Player *sender, Player *target)
     scene->addItem(newKnife);
     allItems.append(newKnife);
     flyingKnives.append(FlyingProp(QPair<QPointF, QPointF>(sender->pos(), target->pos()), newKnife));
+}
+
+void GameScene::rockRollingDown(QPointF point)
+{
+    QRectF rect = QRectF(point.x() - 200, point.y() - 200, 400, 400);
+    auto ellipse = scene->addEllipse(rect, QPen(Qt::yellow), QBrush(Qt::yellow));
+    QPointer<QGraphicsScene> weakScene = scene;
+    QPointer<GameScene> weakThis = this;
+    QTimer::singleShot(100, weakScene, [weakScene, ellipse, weakThis, rect, point]() {
+        if (weakScene) {
+            if (ellipse && ellipse->scene() == weakScene) {
+                weakScene->removeItem(ellipse);
+            }
+            auto rock = weakScene->addPixmap(weakThis->rockImage);
+            QPointF centerOffset(-rock->pixmap().width() / 2.0, -rock->pixmap().height() / 2.0);
+            rock->setPos(point + centerOffset);
+            for (auto player : std::as_const(weakThis->players)) {
+                if (rect.contains(player->pos())) {
+                    player->addBlood(-1);
+                }
+                QTimer::singleShot(500, weakScene, [weakScene, rock]() {
+                    if (rock) {
+                        weakScene->removeItem(rock);
+                    }
+                });
+            }
+        }
+    });
 }

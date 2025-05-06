@@ -31,5 +31,12 @@
         <file>images/cover.png</file>
         <file>images/effect/healthdown.png</file>
         <file>images/effect/healthup.png</file>
+        <file>images/figures/nailong/477ab146acc991917c03e79519527a5620455752.gif</file>
+        <file>images/figures/nailong/death.gif</file>
+        <file>images/figures/nailong/moving1.gif</file>
+        <file>images/figures/nailong/moving2.gif</file>
+        <file>images/figures/nailong/moving3.gif</file>
+        <file>images/figures/nailong/standing.gif</file>
+        <file>images/Props/rock.png</file>
     </qresource>
 </RCC>

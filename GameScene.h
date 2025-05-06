@@ -68,6 +68,9 @@ public:
     const int allPlayers = 10;
     bool win = false;
     qreal gameTime = 0;
+    void rockRollingDown(QPointF point);
+    bool rockStartRolling = false;
+    QPixmap rockImage;
 signals:
     void gameOverSignal();
 };
