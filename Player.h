@@ -32,7 +32,7 @@ protected:
     //--- 游戏属性--、、
     const int defaultPlayerBlood = 12;
     int playerBlood = 12;
-    qreal playerSpeed = 1200;
+    qreal playerSpeed = 800;
     int attackPower = 1;
     QList<SpecialState> specialState;
 

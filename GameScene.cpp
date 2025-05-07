@@ -194,7 +194,7 @@ void GameScene::initProps()
         }
     }
 
-    for (int i = 0; i < 15; i++) {
+    for (int i = 0; i < 5; i++) {
         Prop* prop = new Boot(randomPositionInCircle(sceneCenter, safetyZoneRadius));
         if (prop) {
             props.append(prop);
@@ -212,7 +212,7 @@ void GameScene::initProps()
         }
     }
 
-    for (int i = 0; i < 3; i++) {
+    for (int i = 0; i < 4; i++) {
         Prop *prop = new Bushes(randomPositionInCircle(sceneCenter, safetyZoneRadius));
         if (prop) {
             props.append(prop);
@@ -371,30 +371,63 @@ void GameScene::updateGame()
     //这里先保留吧，可能用得上，这里原先的逻辑是所有的人之间都要画线,现在加了一个只有player==user才能
     for (auto player : std::as_const(players)) {
         QPair<Player *, qreal> pair = closestEnemy(player);
-        if (player == user && pair.first != nullptr && pair.second <= 1200) {
-            QGraphicsLineItem *line = new QGraphicsLineItem(
-                QLineF(player->pos(), pair.first->pos()));
-            QPen pen(Qt::red);
-            pen.setWidth(5);
-            pen.setStyle(Qt::DashDotLine);
-            line->setPen(pen);
-            scene->addItem(line);
+        QPointer<QGraphicsScene> weakScene = scene;
+        if (player == user && pair.first != nullptr) {
+            //=============!!!circle和line指的是游戏要求的瞄准敌人用的===================
+            if (pair.second <= 1200) {
+                //line
+
+                QGraphicsLineItem *line = new QGraphicsLineItem(
+                    QLineF(player->pos(), pair.first->pos()));
+                QPen pen(Qt::red);
+                pen.setWidth(5);
+                pen.setStyle(Qt::DashDotLine);
+                line->setPen(pen);
+                scene->addItem(line);
+                //circle
+                auto circle = scene->addEllipse(pair.first->boundingRect(),
+                                                QPen(QColor(255, 105, 180, 200),
+                                                     15,
+                                                     Qt::DashDotLine));
+                circle->setPos(pair.first->pos());
+                QTimer::singleShot(0, [weakScene, line, circle]() {
+                    if (!weakScene) {
+                        delete line;
+                        delete circle;
+                        return;
+                    }
+                    if (line->scene() == weakScene) {
+                        weakScene->removeItem(line);
+                    }
+                    if (circle->scene() == weakScene) {
+                        weakScene->removeItem(circle);
+                    }
+                    delete line;
+                    delete circle;
+                });
+            }
+
+            //tail这个是移动特效
+            auto tail = scene->addEllipse(-20,
+                                          -20,
+                                          40,
+                                          40,
+                                          QPen(QColor(80, 80, 80, 120)),
+                                          QBrush(QColor(80, 80, 80, 120)));
+            tail->setPos(user->pos().x(), user->pos().y() + user->boundingRect().height() / 2.3);
             // 防止场景被删除时出现空指针访问
-            QPointer<QGraphicsScene> weakScene = scene;
-            // 不能使用QPointer处理QGraphicsLineItem，因为它不是QObject的子类
-            //这个地方我也在怀疑 非要使用这种方法的合理性，但是本着程序能跑就不要动的原则，算了
-            QTimer::singleShot(0, [weakScene, line]() {
-                // 检查场景是否仍然存在
+            //==============注意如果timer设置有延迟的话是可以进行多重绘制的===========
+            QTimer::singleShot(128, [weakScene, tail]() {
                 if (!weakScene) {
-                    delete line; // 无论如何都要删除线条，避免内存泄漏
+                    delete tail;
                     return;
                 }
-                // 如果线条仍在场景中，从场景中移除
-                if (line->scene() == weakScene) {
-                    weakScene->removeItem(line);
+                if (tail->scene() == weakScene) {
+                    weakScene->removeItem(tail);
                 }
-                delete line;
+                delete tail;
             });
+            //=====================end============================
         }
         if (player != user && pair.second <= 1200) {
             NPC *npc = dynamic_cast<NPC *>(player);
@@ -405,8 +438,8 @@ void GameScene::updateGame()
             }
         }
     }
-
-    if (gameTime / 1000 > 3 && !rockStartRolling) {
+    //==============Rock======================
+    if (gameTime / 1000 > 30 && !rockStartRolling) {
         rockRollingDown(user->pos());
         for (int i = 0; i < 5; i++) {
             rockRollingDown(randomPositionInCircle(sceneCenter, safetyZoneRadius));
@@ -418,6 +451,18 @@ void GameScene::updateGame()
                 weakThis->rockStartRolling = false;
             }
         });
+    }
+    //==============New Props======================
+    if (gameTime / 1000 > 10) {
+        qreal q = QRandomGenerator::global()->generateDouble();
+        if (q <= 0.05) {
+            Prop *prop = new Knife(randomPositionInCircle(sceneCenter, safetyZoneRadius));
+            if (prop) {
+                props.append(prop);
+                scene->addItem(prop);
+                allItems.append(prop);
+            }
+        }
     }
 }
 
@@ -471,7 +516,6 @@ QPair<Player *, qreal> GameScene::closestEnemy(Player *player)
     if (players.size() <= 1) {
         return QPair<Player *, qreal>(nullptr, 999999999);
     }
-    
     qreal squareOfDistance = 1145141919810;
     Player *cloestEnemy = nullptr;
     for (auto enemy : std::as_const(players)) {

@@ -270,7 +270,6 @@ void Player::handleColliding()
 User::User(QPointF pos, QGraphicsItem *parent)
     : Player(pos, parent)
 {
-    numOfKinves = 100;
     direction = STAY;
     
     // 检查是否有可用的GIF动画
