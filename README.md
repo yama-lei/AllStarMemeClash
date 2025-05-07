@@ -3,17 +3,155 @@ author: Yama-lei
 date: 2025-05-04
 ---
 
-
-
 # AllStarsMemeClash Docs 全明星meme大乱斗
 
+<img src="https://yamapicgo.oss-cn-nanjing.aliyuncs.com/picgoImage/image-20250507084643077.png" alt="image-20250507084643077" style="zoom: 33%;" />
+
+<center>游戏封面</center>
+
+[toc]
+
+## 项目结构和逻辑
+
+### 文件树
+
+```cpp
+D:.
+│  GameManager.cpp
+│  GameManager.h
+│  GameScene.cpp
+│  GameScene.h
+│  Kinflash.pro
+│  Kinflash.pro.user
+│  main.cpp
+│  MainMenu.cpp
+│  MainMenu.h
+│  MainMenu.ui
+│  mainwindow.cpp
+│  mainwindow.h
+│  mainwindow.ui
+│  PA2 manual.pdf
+│  Player.cpp
+│  Player.h
+│  Prop.cpp
+│  Prop.h
+│  README.md
+│  resource.qrc
+│  ScorePanel.cpp
+│  ScorePanel.h
+│  ScorePanel.ui
+└─images
+    │  background.jpg
+    │  bg.png
+    │  bg2.png
+    │  blue.png
+    │  cover.png
+    │  cover.psd
+    │  green.png
+    │  yellow.png
+    │
+    ├─effect
+    │      fast.png
+    │      fc965.png
+    │      feet.png
+    │      healthdown.png
+    │      healthup.png
+    │      light.png
+    │      strength.png
+    │      strengthUp.png
+    │
+    ├─figures
+    │  │  
+    │  │
+    │  ├─doro
+    │  │
+    │  └─nailong
+    │          moving3.gif
+    │          standing.gif
+    │
+    └─Props  # 道具相关的资源
+```
 
 
 
+### 抽象层级
+
+![4e9539a56bf5b1d79c600261535d6f0](https://yamapicgo.oss-cn-nanjing.aliyuncs.com/picgoImage/4e9539a56bf5b1d79c600261535d6f0.jpg)
+
+## 类和数据结构
+
+## 算法
+
+**算法部分**
+
+### 随机位置生成算法：
+
+使用极坐标变换，和qt随机数生成函数，均匀地生成随机点：
+
+```cpp
+QPointF GameScene::randomPositionInCircle(QPointF center, qreal maxRadius)
+{
+    double alpha = QRandomGenerator::global()->generateDouble() * 6.28;
+    qreal radius = QRandomGenerator::global()->generateDouble() * maxRadius;
+    qreal x = radius * qSin(alpha);
+    qreal y = radius * qCos(alpha);
+    return QPointF(x, y) + center;
+}
+```
+
+ 但是发现大部分的随机点都是在圆心附近，说明算法有问题：
+
+ 这个算法的$E(r) =0.5r$,但是$E(r^2)= 0.25r^2$，我们期望随机点按照面积均匀分布，因而将随机数进行开根号，使得有更大的可能性接近外圆周。
+
+ ```cpp
+QPointF GameScene::randomPositionInCircle(QPointF center, qreal maxRadius)
+{
+    //只能生成安全区以内的
+
+    double alpha = QRandomGenerator::global()->generateDouble() * 6.28;
+    qreal radius = sqrt(QRandomGenerator::global()->generateDouble()) * maxRadius;
+    qreal x = radius * qSin(alpha);
+    qreal y = radius * qCos(alpha);
+    return QPointF(x, y) + center;
+}
+
+ ```
 
 
+​     
 
-开发过程中的常见错误：
+### 刀的更新算法：
+
+```cpp
+// 角色的paint函数
+            qreal per = 360 / numOfKinves;
+        for (int i = 0; i < numOfKinves; i++) {
+            painter->drawPixmap(calculateKinvesPosition(startAlpha + per * i), kinfeImage);
+            qDebug() << "Knife: ";
+        }
+        startAlpha = (startAlpha + 5) % 360;
+//具体计算每一个刀的位置：
+```
+
+5.5更新：角色的刀的位置一直很奇怪
+
+<img src="https://yamapicgo.oss-cn-nanjing.aliyuncs.com/picgoImage/image-20250505161759552.png" alt="image-20250505161759552" style="zoom:25%;" />在paint函数中我多次尝试修改，但是越来越怪。随后加入上图的boundingRect画的Ellipse，进行调试，发现的确应该是刀的位置偏了。
+
+### 最近用户查找算法
+
+其实就是暴力遍历
+
+### “智能”NPC算法
+
+### 防止角色“卡出”地图算法
+
+## 辅助函数
+
+## 开发日志
+
+### 开发中常见的错误
+
+**开发过程中的常见错误**：
 
 1.   xxxxIncomplete Type: 未引入相关头文件
 1.   delete空指针
@@ -25,7 +163,7 @@ date: 2025-05-04
 1.   部分变量忘记初始化，忘记最后赋值
 1.   变量一多就管不过来（特别是没有很好地将游戏开发分成多个抽象层次来开发时）
 
-一些问题和解决方法：
+### 开发中遇见的问题和解决方法
 
 1.   在使用两个gif切换的时候，两个QMovie使用同一个槽函数updateGif，来绘制currentFrame, 并且在角色更新逻辑中更改currentGif。 但是却出现了**只绘制一个图像GIF的情况**，让我很是苦恼。询问大模型后得到可能的原因：
 
@@ -79,9 +217,11 @@ date: 2025-05-04
 
 9.   飞行的刀具无法显示（后来发现是被自己给捡到了。。）
 
-10.   边界移动bug：之前的逻辑是，如果新的位置不在边界内，那么就不要移动；新的逻辑是：如果移出了边界，那么就移动到最近的边界上。
+10.   标注最近的敌人绘制的线会多次画出，检查发现是因为及时将物品removeItem之后也不会直接重绘。修改方法： 将singleShoot的计时器由16ms改为0ms。
 
-11.   NPC飞行的刀具随着时间积累越来越多，出现了发出好几十条的盛况。
+11.   边界移动bug：之前的逻辑是，如果新的位置不在边界内，那么就不要移动；新的逻辑是：如果移出了边界，那么就移动到最近的边界上。
+
+12.   NPC飞行的刀具随着时间积累越来越多，出现了发出好几十条的盛况。
 
       结果发现是多次触发了同一信号。
 
@@ -92,7 +232,7 @@ date: 2025-05-04
                   //  emit player->shootKnives(player, pair.first);
       ```
 
-12.   程序崩溃： 在角色死亡或者游戏胜利的时候都会出现回到MainMenu但是线程崩溃的情况。 经过多轮调试，发现问题应该出现在下面这个函数中：<a name="error">  </a>
+13.   程序崩溃： 在角色死亡或者游戏胜利的时候都会出现回到MainMenu但是线程崩溃的情况。 经过多轮调试，发现问题应该出现在下面这个函数中：<a name="error">  </a>
 
       ```cpp
       void GameManager::switchToMainMenu()
@@ -218,7 +358,7 @@ date: 2025-05-04
 
       经过研究发现，程序中有几处（特别是
 
-13.   又出现了程序崩溃的bug。。。以下是使用了调试工具显示的内容
+14.   又出现了程序崩溃的bug。。。以下是使用了调试工具显示的内容
 
       <img src="https://yamapicgo.oss-cn-nanjing.aliyuncs.com/picgoImage/image-20250505162757406.png" alt="image-20250505162757406" style="zoom:50%;" />
 
@@ -281,7 +421,7 @@ chatGPT: 有可能是在胜利之后处理角色死亡后再处理死亡动画�
    if (!weakScene || !weakPlayer) {
        return;
    }
-   ```
+```
    这个检查确保在尝试访问对象前验证它们是否仍然有效，防止访问已释放的内存。
 
 3. **修复了闭包捕获问题**：
@@ -289,11 +429,9 @@ chatGPT: 有可能是在胜利之后处理角色死亡后再处理死亡动画�
 
 在Qt多线程或异步编程中，当对象可能在不同时间点被销毁时，使用QPointer是一种标准做法。它让你可以安全地检查对象是否仍然存在，而不会导致程序崩溃。
 
-```
-
 貌似是我第N次遇见这个问题了。
 
-
+---
 
 
 
@@ -308,72 +446,5 @@ chatGPT: 有可能是在胜利之后处理角色死亡后再处理死亡动画�
 
 原先的攻击逻辑是： 只要在攻击范围内发动攻击，就一定命中，但是不符合实验手册中`物理情景`的要求，因而进行改变：
 
-
-
-
-
-
-
 ---
 
-算法部分：
-
-1.   随机位置生成算法：
-
-     使用极坐标变换，和qt随机数生成函数，均匀地生成随机点：
-
-     ```cpp
-     QPointF GameScene::randomPositionInCircle(QPointF center, qreal maxRadius)
-     {
-         double alpha = QRandomGenerator::global()->generateDouble() * 6.28;
-         qreal radius = QRandomGenerator::global()->generateDouble() * maxRadius;
-         qreal x = radius * qSin(alpha);
-         qreal y = radius * qCos(alpha);
-         return QPointF(x, y) + center;
-     }
-     ```
-
-     但是发现大部分的随机点都是在圆心附近，说明算法有问题：
-
-     这个算法的$E(r) =0.5r$,但是$E(r^2)= 0.25r^2$，我们期望随机点按照面积均匀分布，因而将随机数进行开根号，使得有更大的可能性接近外圆周。
-
-     ```cpp
-     QPointF GameScene::randomPositionInCircle(QPointF center, qreal maxRadius)
-     {
-         //只能生成安全区以内的
-     
-         double alpha = QRandomGenerator::global()->generateDouble() * 6.28;
-         qreal radius = sqrt(QRandomGenerator::global()->generateDouble()) * maxRadius;
-         qreal x = radius * qSin(alpha);
-         qreal y = radius * qCos(alpha);
-         return QPointF(x, y) + center;
-     }
-     
-     ```
-
-     
-
-2.   刀的更新算法：
-
-     ```cpp
-     // 角色的paint函数
-                 qreal per = 360 / numOfKinves;
-             for (int i = 0; i < numOfKinves; i++) {
-                 painter->drawPixmap(calculateKinvesPosition(startAlpha + per * i), kinfeImage);
-                 qDebug() << "Knife: ";
-             }
-             startAlpha = (startAlpha + 5) % 360;
-     //具体计算每一个刀的位置：
-     ```
-
-     5.5更新：角色的刀的位置一直很奇怪
-
-     <img src="https://yamapicgo.oss-cn-nanjing.aliyuncs.com/picgoImage/image-20250505161759552.png" alt="image-20250505161759552" style="zoom:25%;" />在paint函数中我多次尝试修改，但是越来越怪。随后加入上图的boundingRect画的Ellipse，进行调试，发现的确应该是刀的位置偏了。
-
-3.   最近用户查找算法
-
-     其实就是暴力遍历
-
-4.   “智能”NPC算法
-
-     

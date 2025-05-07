@@ -38,5 +38,6 @@
         <file>images/figures/nailong/moving3.gif</file>
         <file>images/figures/nailong/standing.gif</file>
         <file>images/Props/rock.png</file>
+        <file>images/Props/780.png</file>
     </qresource>
 </RCC>

@@ -25,7 +25,7 @@ GameScene::GameScene(QWidget *parent)
     view->resize(VIEW.width(), VIEW.height());
     view->scale(0.5, 0.5);
     rockImage = QPixmap(":/images/Props/rock.png");
-    rockImage.scaled(600, 600);
+    rockImage.scaled(800, 800);
     QPixmap poisonPixmap(":/images/green.png");
     QPixmap normalPixmap(":/images/yellow.png");
     
@@ -383,7 +383,7 @@ void GameScene::updateGame()
             QPointer<QGraphicsScene> weakScene = scene;
             // 不能使用QPointer处理QGraphicsLineItem，因为它不是QObject的子类
             //这个地方我也在怀疑 非要使用这种方法的合理性，但是本着程序能跑就不要动的原则，算了
-            QTimer::singleShot(16, [weakScene, line]() {
+            QTimer::singleShot(0, [weakScene, line]() {
                 // 检查场景是否仍然存在
                 if (!weakScene) {
                     delete line; // 无论如何都要删除线条，避免内存泄漏
@@ -408,6 +408,9 @@ void GameScene::updateGame()
 
     if (gameTime / 1000 > 3 && !rockStartRolling) {
         rockRollingDown(user->pos());
+        for (int i = 0; i < 5; i++) {
+            rockRollingDown(randomPositionInCircle(sceneCenter, safetyZoneRadius));
+        }
         rockStartRolling = true;
         QPointer<GameScene> weakThis = this;
         QTimer::singleShot(20000, weakThis, [weakThis]() {
@@ -455,7 +458,6 @@ void GameScene::handlePlayerDeath(Player *player)
         if (!weakScene || !weakPlayer) {
             return;
         }
-        
         if (weakPlayer->scene() == weakScene) {
             weakScene->removeItem(weakPlayer);
         }
@@ -564,13 +566,17 @@ void GameScene::handleShootKnives(Player *sender, Player *target)
 void GameScene::rockRollingDown(QPointF point)
 {
     QRectF rect = QRectF(point.x() - 200, point.y() - 200, 400, 400);
-    auto ellipse = scene->addEllipse(rect, QPen(Qt::yellow), QBrush(Qt::yellow));
+    auto tmp = QPixmap(":/images/Props/780.png");
+    tmp.scaled(600, 600);
+    auto targetImage = scene->addPixmap(tmp);
+    targetImage->setPos(point - QPoint(tmp.width() / 2, tmp.height() / 2));
+    // auto ellipse = scene->addEllipse(rect, QPen(Qt::yellow), QBrush(Qt::yellow));
     QPointer<QGraphicsScene> weakScene = scene;
     QPointer<GameScene> weakThis = this;
-    QTimer::singleShot(100, weakScene, [weakScene, ellipse, weakThis, rect, point]() {
+    QTimer::singleShot(1000, weakScene, [weakScene, targetImage, weakThis, rect, point]() {
         if (weakScene) {
-            if (ellipse && ellipse->scene() == weakScene) {
-                weakScene->removeItem(ellipse);
+            if (targetImage && targetImage->scene() == weakScene) {
+                weakScene->removeItem(targetImage);
             }
             auto rock = weakScene->addPixmap(weakThis->rockImage);
             QPointF centerOffset(-rock->pixmap().width() / 2.0, -rock->pixmap().height() / 2.0);
@@ -579,7 +585,7 @@ void GameScene::rockRollingDown(QPointF point)
                 if (rect.contains(player->pos())) {
                     player->addBlood(-1);
                 }
-                QTimer::singleShot(500, weakScene, [weakScene, rock]() {
+                QTimer::singleShot(1000, weakScene, [weakScene, rock]() {
                     if (rock) {
                         weakScene->removeItem(rock);
                     }
